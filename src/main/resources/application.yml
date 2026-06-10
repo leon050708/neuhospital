@@ -1,0 +1,75 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: neuhospital
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/smart_medical
+    username: smart_med
+    password: smart_med_pass
+    driver-class-name: org.postgresql.Driver
+
+  data:
+    redis:
+      host: localhost
+      port: 6380
+      timeout: 5s
+
+  kafka:
+    bootstrap-servers: localhost:9094
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: smart-medical-java
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:dummy-key-for-local-startup}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      chat:
+        options:
+          model: ${OPENAI_MODEL:gpt-4o-mini}
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+minio:
+  endpoint: http://localhost:9005
+  access-key: minioadmin
+  secret-key: minioadmin
+  bucket:
+    ct-original: medical-ct-original
+    ct-processed: medical-ct-processed
+    ct-heatmap: medical-ct-heatmap
+    report: medical-report
+    knowledge-docs: knowledge-docs
+
+python:
+  image-ai:
+    base-url: http://localhost:8001
+
+app:
+  kafka:
+    topic:
+      image-analysis-request: medical.image.analysis.request
+      image-analysis-result: medical.image.analysis.result
+      ai-chat-log: medical.ai.chat.log
+      audit-log: medical.audit.log
+      notification: medical.notification
+
+auth:
+  jwt:
+    secret: smart-medical-jwt-secret-key-please-change-in-production-123456
+    issuer: smart-medical
+    access-expiration-seconds: 7200
+    refresh-expiration-seconds: 604800
