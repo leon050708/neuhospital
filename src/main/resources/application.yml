@@ -6,9 +6,9 @@ spring:
     name: neuhospital
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/smart_medical
-    username: smart_med
-    password: smart_med_pass
+    url: jdbc:postgresql://59.110.116.141:5432/postgres
+    username: leon
+    password: YcjQe%dFF2*Ds3z7mysH4w
     driver-class-name: org.postgresql.Driver
 
   data:
