@@ -15,4 +15,6 @@ public interface AuthService {
     RefreshTokenResponse refreshToken(RefreshTokenRequest request);
 
     void logout(String accessToken);
+
+    void register(com.neusoft.neu23.neuhospital.auth.dto.RegisterReq req);
 }

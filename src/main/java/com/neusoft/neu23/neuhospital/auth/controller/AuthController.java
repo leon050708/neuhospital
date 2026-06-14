@@ -46,4 +46,10 @@ public class AuthController {
         authService.logout(accessToken);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/register")
+    public ResponseEntity<Void> register(@RequestBody com.neusoft.neu23.neuhospital.auth.dto.RegisterReq request) {
+        authService.register(request);
+        return ResponseEntity.ok().build();
+    }
 }

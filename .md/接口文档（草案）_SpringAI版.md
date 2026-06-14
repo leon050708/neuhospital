@@ -140,9 +140,38 @@ sessionId
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
+| POST | `/api/auth/register`| 账号自主注册 (✔ 已实现) |
 | POST | `/api/auth/login` | 登录 (✔ 已实现) |
 | POST | `/api/auth/refresh` | 刷新 access token (✔ 已实现) |
 | POST | `/api/auth/logout` | 退出登录 (✔ 已实现) |
+
+### 3.0 `POST /api/auth/register`
+
+**作用：** 患者自主注册账号，同时生成登录账号和基本档案。
+
+**请求体：**
+
+```json
+{
+  "username": "zhangsan_01",
+  "password": "mySecurePassword123",
+  "realName": "张三",
+  "phone": "13800138000",
+  "idCard": "110105199001011234",
+  "gender": "MALE"
+}
+```
+
+**响应体：**
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": null,
+  "timestamp": "2026-06-11T10:00:00Z"
+}
+```
 
 ### 3.1 `POST /api/auth/login`
 

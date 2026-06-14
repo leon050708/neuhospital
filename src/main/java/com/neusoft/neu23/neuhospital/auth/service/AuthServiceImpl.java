@@ -27,6 +27,12 @@ public class AuthServiceImpl implements AuthService {
     private static final String STATUS_ONLINE = "ONLINE";
     private static final String STATUS_ACTIVE = "ACTIVE";
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.neusoft.neu23.neuhospital.patient.mapper.PatientMapper patientMapper;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.neusoft.neu23.neuhospital.system.mapper.SysUserMapper sysUserMapper;
+
     private final AuthAccountProvider accountProvider;
     private final LoginSessionStore sessionStore;
     private final JwtTokenProvider tokenProvider;
@@ -130,5 +136,47 @@ public class AuthServiceImpl implements AuthService {
             sessionStore.removeRefreshToken(session.refreshTokenId());
         }
         sessionStore.removeUserSessionBinding(claims.userId());
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void register(com.neusoft.neu23.neuhospital.auth.dto.RegisterReq req) {
+        // 1. 检查 username 是否已存在
+        Long userCount = sysUserMapper.selectCount(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.neusoft.neu23.neuhospital.system.entity.SysUserEntity>().eq("username", req.getUsername()));
+        if (userCount > 0) {
+            throw new IllegalArgumentException("该用户名已被注册");
+        }
+
+        // 2. 检查手机号或身份证是否已在患者表中存在
+        Long patientCount = patientMapper.selectCount(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.neusoft.neu23.neuhospital.patient.entity.PatientEntity>().eq("phone", req.getPhone()));
+        if (patientCount > 0) {
+            throw new IllegalArgumentException("该手机号已建档，请直接登录");
+        }
+
+        // 3. 创建患者档案 (Patient)
+        String patientNo = "PAT-" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        com.neusoft.neu23.neuhospital.patient.entity.PatientEntity patient = new com.neusoft.neu23.neuhospital.patient.entity.PatientEntity();
+        patient.setPatientNo(patientNo);
+        patient.setName(req.getRealName());
+        patient.setGender(req.getGender() != null ? req.getGender() : "UNKNOWN");
+        patient.setPhone(req.getPhone());
+        patient.setIdCard(req.getIdCard());
+        patient.setStatus("ENABLED");
+        patient.setCreatedAt(java.time.LocalDateTime.now());
+        patient.setUpdatedAt(java.time.LocalDateTime.now());
+        patientMapper.insert(patient);
+
+        // 4. 创建系统账号 (SysUser)
+        com.neusoft.neu23.neuhospital.system.entity.SysUserEntity user = new com.neusoft.neu23.neuhospital.system.entity.SysUserEntity();
+        user.setUsername(req.getUsername());
+        user.setPasswordHash(passwordEncoder.encode(req.getPassword())); // 使用 BCrypt 强哈希加密
+        user.setUserType("PATIENT");
+        user.setBizId(patient.getId()); // 关联业务ID
+        user.setRealName(req.getRealName());
+        user.setPhone(req.getPhone());
+        user.setStatus("ENABLED");
+        user.setCreatedAt(java.time.LocalDateTime.now());
+        user.setUpdatedAt(java.time.LocalDateTime.now());
+        sysUserMapper.insert(user);
     }
 }
