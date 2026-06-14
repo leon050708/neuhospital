@@ -63,11 +63,13 @@ ai
 ### 2.2 认证方式
 
 - 登录后返回 JWT `accessToken`
-- 后续接口通过请求头传递：
+- 后续常规接口通过请求头传递：
 
 ```http
 Authorization: Bearer {accessToken}
 ```
+
+- **特殊说明（SSE等流式接口）：** 对于无法自定义请求头的浏览器 `EventSource` 请求，允许通过 URL Query 参数传递：`?accessToken={accessToken}`。
 
 ### 2.3 统一返回结构
 
@@ -242,7 +244,7 @@ Authorization: Bearer {accessToken}
 - `username`
 - `realName`
 - `userType`
-- `roles`
+- `role`
 - `bizId`
 
 ---
@@ -681,6 +683,9 @@ Authorization: Bearer {accessToken}
 | POST | `/api/ai/chat/sessions/{id}/messages` | 发送一轮消息并获取回复 | PATIENT / DOCTOR | `ai_chat_message` |
 | GET | `/api/ai/chat/sessions/{id}/messages` | 查询会话消息历史 | PATIENT / DOCTOR | `ai_chat_message` |
 | GET | `/api/ai/chat/sessions/{id}/stream` | SSE 流式问诊 | PATIENT / DOCTOR | `ai_chat_message` |
+
+**特别说明：**
+- 对于 `/stream` SSE 接口，请使用 `GET /api/ai/chat/sessions/{id}/stream?accessToken={token}` 方式鉴权，以兼容浏览器 `EventSource` 限制。
 
 **消息请求体建议：**
 

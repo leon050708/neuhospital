@@ -179,4 +179,20 @@ public class AuthServiceImpl implements AuthService {
         user.setUpdatedAt(java.time.LocalDateTime.now());
         sysUserMapper.insert(user);
     }
+
+    @Override
+    public com.neusoft.neu23.neuhospital.auth.vo.UserProfileResponse getCurrentUser(String accessToken) {
+        JwtUserClaims claims = tokenProvider.parseAccessToken(accessToken);
+        LoginSession session = sessionStore.getSession(claims.sessionId());
+        if (session == null) {
+            throw new IllegalArgumentException("登录会话已失效");
+        }
+        return new com.neusoft.neu23.neuhospital.auth.vo.UserProfileResponse(
+                claims.userId(),
+                session.username(),
+                claims.role(),
+                claims.userType(),
+                claims.bizId()
+        );
+    }
 }

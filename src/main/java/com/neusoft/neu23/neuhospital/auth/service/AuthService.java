@@ -17,4 +17,6 @@ public interface AuthService {
     void logout(String accessToken);
 
     void register(com.neusoft.neu23.neuhospital.auth.dto.RegisterReq req);
+
+    com.neusoft.neu23.neuhospital.auth.vo.UserProfileResponse getCurrentUser(String accessToken);
 }
