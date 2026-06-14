@@ -46,4 +46,19 @@ public class AuthController {
         authService.logout(accessToken);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/register")
+    public ResponseEntity<Void> register(@RequestBody com.neusoft.neu23.neuhospital.auth.dto.RegisterReq request) {
+        authService.register(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @org.springframework.web.bind.annotation.GetMapping("/me")
+    public ResponseEntity<com.neusoft.neu23.neuhospital.auth.vo.UserProfileResponse> me(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        if (authorization == null || !authorization.startsWith(BEARER_PREFIX)) {
+            return ResponseEntity.status(401).build();
+        }
+        String accessToken = authorization.substring(BEARER_PREFIX.length());
+        return ResponseEntity.ok(authService.getCurrentUser(accessToken));
+    }
 }
