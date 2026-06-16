@@ -697,12 +697,12 @@ Authorization: Bearer {accessToken}
 
 ---
 
-## 12.3 AI 导诊接口
+## 12.3 AI 导诊接口 ✅ [已合并至问诊聊天接口中完成，由 Universal Agent 统一处理]
 
 | 方法 | 路径 | 说明 | 角色 | 关联表 |
 |---|---|---|---|---|
-| POST | `/api/ai/triage` | 触发 AI 导诊 | PATIENT | `ai_triage_result` |
-| GET | `/api/ai/triage/{sessionId}` | 查询导诊结果 | PATIENT / DOCTOR | `ai_triage_result` |
+| POST | `/api/ai/triage` | 触发 AI 导诊 (废弃) | PATIENT | `ai_triage_result` |
+| GET | `/api/ai/triage/{sessionId}` | 查询导诊结果 (废弃) | PATIENT / DOCTOR | `ai_triage_result` |
 
 ---
 
