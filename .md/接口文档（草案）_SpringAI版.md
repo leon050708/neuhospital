@@ -155,7 +155,6 @@ sessionId
 
 ```json
 {
-  "username": "zhangsan_01",
   "password": "mySecurePassword123",
   "realName": "张三",
   "phone": "13800138000",
@@ -659,7 +658,7 @@ Authorization: Bearer {accessToken}
 
 | 方法 | 路径 | 说明 | 角色 | 关联表 |
 |---|---|---|---|---|
-| POST | `/api/ai/chat/sessions` | 创建 AI 会话 | PATIENT / DOCTOR | `ai_chat_session` |
+| POST | `/api/ai/chat/sessions` | 创建 AI 会话 ✅ [已完成] | PATIENT / DOCTOR | `ai_chat_session` |
 | GET | `/api/ai/chat/sessions/{id}` | 查询会话详情 | PATIENT / DOCTOR | `ai_chat_session` |
 | GET | `/api/ai/chat/sessions` | 查询会话列表 | PATIENT / DOCTOR / ADMIN | `ai_chat_session` |
 | POST | `/api/ai/chat/sessions/{id}/end` | 结束会话 | PATIENT / DOCTOR | `ai_chat_session` |
@@ -680,7 +679,7 @@ Authorization: Bearer {accessToken}
 
 | 方法 | 路径 | 说明 | 角色 | 关联表 |
 |---|---|---|---|---|
-| POST | `/api/ai/chat/sessions/{id}/messages` | 发送一轮消息并获取回复 | PATIENT / DOCTOR | `ai_chat_message` |
+| POST | `/api/ai/chat/sessions/{id}/messages` | 发送一轮消息并获取回复 ✅ [已完成] | PATIENT / DOCTOR | `ai_chat_message` |
 | GET | `/api/ai/chat/sessions/{id}/messages` | 查询会话消息历史 | PATIENT / DOCTOR | `ai_chat_message` |
 | GET | `/api/ai/chat/sessions/{id}/stream` | SSE 流式问诊 | PATIENT / DOCTOR | `ai_chat_message` |
 

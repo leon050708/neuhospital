@@ -16,7 +16,8 @@ import java.util.Arrays;
 
 @RestController
 @RequestMapping("/api/ai/test")
-public class DashScopeTestController {
+public class
+DashScopeTestController {
 
     @GetMapping("/chat")
     public String chatWithDashScope(@RequestParam(defaultValue = "你好，请自我介绍一下。") String prompt) {
