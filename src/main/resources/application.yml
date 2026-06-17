@@ -73,3 +73,20 @@ auth:
     issuer: smart-medical
     access-expiration-seconds: 7200
     refresh-expiration-seconds: 604800
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: default
+      paths-to-match: /api/**
+      packages-to-scan: com.neusoft.neu23.neuhospital
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn

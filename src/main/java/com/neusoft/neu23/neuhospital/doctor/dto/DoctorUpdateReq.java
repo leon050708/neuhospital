@@ -1,12 +1,22 @@
 package com.neusoft.neu23.neuhospital.doctor.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "更新医生请求")
 public class DoctorUpdateReq {
+    @Schema(description = "医生姓名", example = "李华")
     private String name;
+    @Schema(description = "职称", example = "副主任医师")
     private String title;
+    @Schema(description = "所属科室 ID", example = "3")
     private Long departmentId;
+    @Schema(description = "医生简介")
     private String introduction;
+    @Schema(description = "擅长方向")
     private String specialty;
+    @Schema(description = "联系电话", example = "13800138000")
     private String phone;
+    @Schema(description = "状态", example = "ENABLED")
     private String status;
 
     public String getName() { return name; }

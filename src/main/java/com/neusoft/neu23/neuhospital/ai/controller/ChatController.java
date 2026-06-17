@@ -23,8 +23,12 @@ public class ChatController {
 
     @PostMapping
     public Result<AiChatSessionEntity> createSession(@RequestBody ChatSessionCreateReq req) {
+        Long currentPatientId = com.neusoft.neu23.neuhospital.auth.security.SecurityUtils.getCurrentUserId();
+        if (currentPatientId == null) {
+            return Result.error(401, "未登录或会话已过期");
+        }
         AiChatSessionEntity session = chatAgentService.createSession(
-                req.getPatientId(),
+                currentPatientId,
                 req.getRegistrationId(),
                 req.getSessionType());
         return Result.success(session);

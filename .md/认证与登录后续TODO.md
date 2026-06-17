@@ -190,3 +190,12 @@
 - 真实三端权限
 
 这样后面再接 AI、Agent、MCP、Python 服务时，底座才是稳的。
+
+## 14. 个人学习 TODO
+
+当前建议按下面顺序补理解：
+
+1. 先看 `JWT + Spring Security`
+   - 搞清楚登录、发 token、过滤器鉴权、安全上下文、`SecurityUtils` 取当前用户这条链路
+2. 再看 `HTTPS`
+   - 搞清楚当前项目为什么还是 HTTP、如果后面要切 HTTPS 应该改哪些配置

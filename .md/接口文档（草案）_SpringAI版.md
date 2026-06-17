@@ -667,11 +667,12 @@ Authorization: Bearer {accessToken}
 
 ```json
 {
-  "patientId": 20001,
   "registrationId": 50001,
   "sessionType": "INQUIRY"
 }
 ```
+
+> **注意：** `patientId` 不再需要由前端传入。系统会自动通过 Spring Security 拦截器解析当前请求头的 JWT，从中提取出 `userId` 作为 `patientId`，彻底杜绝身份伪造的风险。
 
 ---
 

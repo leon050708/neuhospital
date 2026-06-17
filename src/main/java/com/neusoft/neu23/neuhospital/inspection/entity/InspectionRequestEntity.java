@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @TableName("inspection_request")
 public class InspectionRequestEntity {
@@ -22,6 +23,7 @@ public class InspectionRequestEntity {
     private String inspectionItemName;
     private String sampleType;
     private Boolean urgentFlag;
+    private BigDecimal feeAmount;
     private String status;
     private String resultSummary;
     private LocalDateTime requestedAt;
@@ -125,6 +127,14 @@ public class InspectionRequestEntity {
 
     public void setUrgentFlag(Boolean urgentFlag) {
         this.urgentFlag = urgentFlag;
+    }
+
+    public BigDecimal getFeeAmount() {
+        return feeAmount;
+    }
+
+    public void setFeeAmount(BigDecimal feeAmount) {
+        this.feeAmount = feeAmount;
     }
 
     public String getStatus() {

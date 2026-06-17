@@ -1,11 +1,18 @@
 package com.neusoft.neu23.neuhospital.common.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.LocalDateTime;
 
+@Schema(description = "通用接口响应包装")
 public class Result<T> {
+    @Schema(description = "业务状态码，200 表示成功", example = "200")
     private Integer code;
+    @Schema(description = "响应消息", example = "success")
     private String message;
+    @Schema(description = "实际响应数据")
     private T data;
+    @Schema(description = "响应时间")
     private LocalDateTime timestamp;
 
     public Result() {

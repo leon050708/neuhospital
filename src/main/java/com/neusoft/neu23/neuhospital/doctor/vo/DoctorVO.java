@@ -1,16 +1,30 @@
 package com.neusoft.neu23.neuhospital.doctor.vo;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "医生档案响应")
 public class DoctorVO {
+    @Schema(description = "医生主键 ID", example = "10")
     private Long id;
+    @Schema(description = "医生工号", example = "D20240001")
     private String doctorNo;
+    @Schema(description = "医生姓名", example = "李华")
     private String name;
+    @Schema(description = "性别", example = "男")
     private String gender;
+    @Schema(description = "职称", example = "主任医师")
     private String title;
+    @Schema(description = "所属科室 ID", example = "3")
     private Long departmentId;
+    @Schema(description = "所属科室名称", example = "心内科")
     private String departmentName; // 追加科室名称方便前端展示
+    @Schema(description = "医生简介")
     private String introduction;
+    @Schema(description = "擅长方向")
     private String specialty;
+    @Schema(description = "联系电话", example = "13800138000")
     private String phone;
+    @Schema(description = "状态", example = "ENABLED")
     private String status;
 
     public Long getId() { return id; }
