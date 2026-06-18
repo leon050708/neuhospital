@@ -18,7 +18,7 @@ from train_b1_b2_classifier import (
 )
 
 
-DEFAULT_MODEL_PATH = Path("/Users/leon/PycharmProjects/neuedu/ct_demo1/b1b2_run/best_b1_b2_model.pth")
+DEFAULT_MODEL_PATH = Path("/Users/leon/Desktop/code/javaProject/neuhospital/.md/ct/best_b1_b2_model.pth")
 LABEL_NAMES = ["B1", "B2"]
 
 
