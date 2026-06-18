@@ -146,13 +146,15 @@ public class MedicalRecordServiceImpl extends ServiceImpl<MedicalRecordMapper, M
 
         // 2. 插入新的诊断明细
         if (diagnoses != null && !diagnoses.isEmpty()) {
-            List<MedicalDiagnosisEntity> entities = diagnoses.stream().map(req -> {
+            // MyBatis-Plus saveBatch 会额外打开 batch SqlSession。
+            // 在“先插主表，再立刻插子表”的同事务场景里，这会让子表插入脱离当前主表事务可见性。
+            // 这里改成逐条 save，确保诊断明细和病历主表始终走同一事务边界。
+            for (MedicalDiagnosisReq req : diagnoses) {
                 MedicalDiagnosisEntity diagnosisEntity = new MedicalDiagnosisEntity();
                 BeanUtils.copyProperties(req, diagnosisEntity);
                 diagnosisEntity.setMedicalRecordId(recordId);
-                return diagnosisEntity;
-            }).collect(Collectors.toList());
-            diagnosisService.saveBatch(entities);
+                diagnosisService.save(diagnosisEntity);
+            }
         }
     }
 

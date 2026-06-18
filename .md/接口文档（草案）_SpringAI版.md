@@ -155,7 +155,6 @@ sessionId
 
 ```json
 {
-  "username": "zhangsan_01",
   "password": "mySecurePassword123",
   "realName": "张三",
   "phone": "13800138000",
@@ -659,7 +658,7 @@ Authorization: Bearer {accessToken}
 
 | 方法 | 路径 | 说明 | 角色 | 关联表 |
 |---|---|---|---|---|
-| POST | `/api/ai/chat/sessions` | 创建 AI 会话 | PATIENT / DOCTOR | `ai_chat_session` |
+| POST | `/api/ai/chat/sessions` | 创建 AI 会话 ✅ [已完成] | PATIENT / DOCTOR | `ai_chat_session` |
 | GET | `/api/ai/chat/sessions/{id}` | 查询会话详情 | PATIENT / DOCTOR | `ai_chat_session` |
 | GET | `/api/ai/chat/sessions` | 查询会话列表 | PATIENT / DOCTOR / ADMIN | `ai_chat_session` |
 | POST | `/api/ai/chat/sessions/{id}/end` | 结束会话 | PATIENT / DOCTOR | `ai_chat_session` |
@@ -668,11 +667,12 @@ Authorization: Bearer {accessToken}
 
 ```json
 {
-  "patientId": 20001,
   "registrationId": 50001,
   "sessionType": "INQUIRY"
 }
 ```
+
+> **注意：** `patientId` 不再需要由前端传入。系统会自动通过 Spring Security 拦截器解析当前请求头的 JWT，从中提取出 `userId` 作为 `patientId`，彻底杜绝身份伪造的风险。
 
 ---
 
@@ -680,7 +680,7 @@ Authorization: Bearer {accessToken}
 
 | 方法 | 路径 | 说明 | 角色 | 关联表 |
 |---|---|---|---|---|
-| POST | `/api/ai/chat/sessions/{id}/messages` | 发送一轮消息并获取回复 | PATIENT / DOCTOR | `ai_chat_message` |
+| POST | `/api/ai/chat/sessions/{id}/messages` | 发送一轮消息并获取回复 ✅ [已完成] | PATIENT / DOCTOR | `ai_chat_message` |
 | GET | `/api/ai/chat/sessions/{id}/messages` | 查询会话消息历史 | PATIENT / DOCTOR | `ai_chat_message` |
 | GET | `/api/ai/chat/sessions/{id}/stream` | SSE 流式问诊 | PATIENT / DOCTOR | `ai_chat_message` |
 
@@ -698,12 +698,12 @@ Authorization: Bearer {accessToken}
 
 ---
 
-## 12.3 AI 导诊接口
+## 12.3 AI 导诊接口 ✅ [已合并至问诊聊天接口中完成，由 Universal Agent 统一处理]
 
 | 方法 | 路径 | 说明 | 角色 | 关联表 |
 |---|---|---|---|---|
-| POST | `/api/ai/triage` | 触发 AI 导诊 | PATIENT | `ai_triage_result` |
-| GET | `/api/ai/triage/{sessionId}` | 查询导诊结果 | PATIENT / DOCTOR | `ai_triage_result` |
+| POST | `/api/ai/triage` | 触发 AI 导诊 (废弃) | PATIENT | `ai_triage_result` |
+| GET | `/api/ai/triage/{sessionId}` | 查询导诊结果 (废弃) | PATIENT / DOCTOR | `ai_triage_result` |
 
 ---
 

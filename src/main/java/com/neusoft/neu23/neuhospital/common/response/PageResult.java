@@ -1,11 +1,18 @@
 package com.neusoft.neu23.neuhospital.common.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.util.List;
 
+@Schema(description = "分页数据包装")
 public class PageResult<T> {
+    @Schema(description = "当前页数据列表")
     private List<T> records;
+    @Schema(description = "当前页码", example = "1")
     private Long pageNo;
+    @Schema(description = "每页条数", example = "10")
     private Long pageSize;
+    @Schema(description = "总记录数", example = "56")
     private Long total;
 
     public PageResult() {

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional // 保证每个测试后数据回滚
+@WithMockUser(username = "test-doctor")
 public class MedicalRecordControllerIntegrationTests {
 
     @Autowired
@@ -40,10 +42,11 @@ public class MedicalRecordControllerIntegrationTests {
     @Test
     void testCreateAndUpdateRecordFlow() throws Exception {
         // 0. 准备前置外键数据
-        jdbcTemplate.update("INSERT INTO patient (id, patient_name, id_card, gender, phone) VALUES (20001, '张三', '110105199001011234', 'MALE', '13800000000') ON CONFLICT DO NOTHING");
-        jdbcTemplate.update("INSERT INTO department (id, dept_code, dept_name, category) VALUES (40001, 'NEURO', '神经内科', 'CLINICAL') ON CONFLICT DO NOTHING");
-        jdbcTemplate.update("INSERT INTO doctor (id, doctor_name, department_id, title) VALUES (30001, '李医生', 40001, 'CHIEF') ON CONFLICT DO NOTHING");
-        jdbcTemplate.update("INSERT INTO registration (id, reg_no, patient_id, doctor_id, department_id, visit_date, time_slot, status, fee_amount) VALUES (50001, 'REG20231010', 20001, 30001, 40001, CURRENT_DATE, 'MORNING', 'COMPLETED', 50.0) ON CONFLICT DO NOTHING");
+        jdbcTemplate.update("INSERT INTO patient (id, patient_no, name, id_card, gender, phone, status) VALUES (20001, 'PAT20001', '张三', '110105199001011234', 'MALE', '13800000000', 'ENABLED') ON CONFLICT DO NOTHING");
+        jdbcTemplate.update("INSERT INTO department (id, dept_code, dept_name, dept_type, status) VALUES (40001, 'NEURO', '神经内科', 'CLINICAL', 'ENABLED') ON CONFLICT DO NOTHING");
+        jdbcTemplate.update("INSERT INTO doctor (id, doctor_no, name, department_id, title, status) VALUES (30001, 'DOC30001', '李医生', 40001, 'CHIEF', 'ENABLED') ON CONFLICT DO NOTHING");
+        jdbcTemplate.update("INSERT INTO doctor_schedule (id, doctor_id, department_id, schedule_date, time_slot, source_count, available_count, fee_amount, source_type, status) VALUES (60001, 30001, 40001, CURRENT_DATE, 'MORNING', 20, 20, 50.0, 'NORMAL', 'ENABLED') ON CONFLICT DO NOTHING");
+        jdbcTemplate.update("INSERT INTO registration (id, registration_no, patient_id, doctor_id, department_id, schedule_id, visit_date, time_slot, status, fee_amount, registered_at) VALUES (50001, 'REG20231010', 20001, 30001, 40001, 60001, CURRENT_DATE, 'MORNING', 'COMPLETED', 50.0, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING");
 
         // 1. 新建草稿病历，同时传入诊断
         MedicalRecordCreateReq createReq = new MedicalRecordCreateReq();
