@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: neuhospital
+  servlet:
+    multipart:
+      max-file-size: 1GB
+      max-request-size: 1GB
 
   datasource:
     url: jdbc:postgresql://59.110.116.141:5432/postgres
@@ -79,3 +83,5 @@ auth:
     issuer: smart-medical
     access-expiration-seconds: 7200
     refresh-expiration-seconds: 604800
+
+

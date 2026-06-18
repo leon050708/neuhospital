@@ -38,14 +38,16 @@ public class CtAiInferenceService {
 
         ProcessBuilder processBuilder = new ProcessBuilder(command);
         processBuilder.directory(Path.of("").toAbsolutePath().toFile());
-        processBuilder.redirectErrorStream(true);
 
         try {
             Process process = processBuilder.start();
             String output;
-            try (InputStream inputStream = process.getInputStream()) {
+            String errorOutput;
+            try (InputStream inputStream = process.getInputStream();
+                 InputStream errorStream = process.getErrorStream()) {
                 boolean finished = process.waitFor(ctAnalysisProperties.getTimeoutSeconds(), TimeUnit.SECONDS);
                 output = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8).trim();
+                errorOutput = new String(errorStream.readAllBytes(), StandardCharsets.UTF_8).trim();
                 if (!finished) {
                     process.destroyForcibly();
                     throw new BusinessException("CT 推理超时，请稍后重试");
@@ -53,14 +55,32 @@ public class CtAiInferenceService {
             }
 
             if (process.exitValue() != 0) {
-                throw new BusinessException("CT 推理失败: " + output);
+                String detail = output;
+                if (detail == null || detail.isBlank()) {
+                    detail = errorOutput;
+                } else if (errorOutput != null && !errorOutput.isBlank()) {
+                    detail = detail + System.lineSeparator() + errorOutput;
+                }
+                throw new BusinessException("CT 推理失败: " + detail);
             }
 
-            return objectMapper.readValue(output, B1B2InferenceResult.class);
+            return objectMapper.readValue(extractJsonPayload(output), B1B2InferenceResult.class);
         } catch (BusinessException ex) {
             throw ex;
         } catch (Exception ex) {
             throw new BusinessException("调用 CT 推理脚本失败: " + ex.getMessage());
         }
+    }
+
+    private String extractJsonPayload(String output) {
+        if (output == null || output.isBlank()) {
+            throw new BusinessException("CT 推理脚本未输出结果");
+        }
+        int jsonStart = output.indexOf('{');
+        int jsonEnd = output.lastIndexOf('}');
+        if (jsonStart < 0 || jsonEnd < jsonStart) {
+            throw new BusinessException("CT 推理脚本未输出合法 JSON: " + output);
+        }
+        return output.substring(jsonStart, jsonEnd + 1);
     }
 }
