@@ -1,20 +1,19 @@
 package com.neusoft.neu23.neuhospital.auth.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "患者账号注册请求")
 public class RegisterReq {
-    private String username;
+    @Schema(description = "登录密码", example = "123456")
     private String password;
+    @Schema(description = "真实姓名", example = "张三")
     private String realName;
+    @Schema(description = "手机号", example = "13800138000")
     private String phone;
+    @Schema(description = "身份证号", example = "210102199901011234")
     private String idCard;
+    @Schema(description = "性别", example = "男")
     private String gender;
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
 
     public String getPassword() {
         return password;

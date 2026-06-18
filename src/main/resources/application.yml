@@ -6,9 +6,9 @@ spring:
     name: neuhospital
 
   datasource:
-    url: jdbc:postgresql://59.110.116.141:5432/postgres
-    username: leon
-    password: YcjQe%dFF2*Ds3z7mysH4w
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   data:
@@ -41,12 +41,12 @@ spring:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 minio:
   endpoint: http://localhost:9005
-  access-key: minioadmin
-  secret-key: minioadmin
+  access-key: ${MINIO_ACCESS_KEY}
+  secret-key: ${MINIO_SECRET_KEY}
   bucket:
     ct-original: medical-ct-original
     ct-processed: medical-ct-processed
@@ -75,7 +75,24 @@ app:
 
 auth:
   jwt:
-    secret: smart-medical-jwt-secret-key-please-change-in-production-123456
+    secret: ${JWT_SECRET}
     issuer: smart-medical
     access-expiration-seconds: 7200
     refresh-expiration-seconds: 604800
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: default
+      paths-to-match: /api/**
+      packages-to-scan: com.neusoft.neu23.neuhospital
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn

@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Custom Ignored ###
+.tmp/
+.codegraph/
+*.docx
+*.pdf

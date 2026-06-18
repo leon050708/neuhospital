@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@WithMockUser(username = "test-admin")
 public class PatientControllerIntegrationTests {
 
     @Autowired
@@ -63,6 +65,7 @@ public class PatientControllerIntegrationTests {
         req1.setName("Test Patient 1");
         req1.setIdCard("110105199001011111");
         req1.setPhone("13800138001");
+        req1.setGender("MALE");
         
         mockMvc.perform(post("/api/patients")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -73,6 +76,7 @@ public class PatientControllerIntegrationTests {
         req2.setName("Test Patient 2");
         req2.setIdCard("110105199001011111"); // duplicate ID card
         req2.setPhone("13800138002");
+        req2.setGender("FEMALE");
 
         mockMvc.perform(post("/api/patients")
                 .contentType(MediaType.APPLICATION_JSON)

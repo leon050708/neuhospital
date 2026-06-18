@@ -141,16 +141,20 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @org.springframework.transaction.annotation.Transactional
     public void register(com.neusoft.neu23.neuhospital.auth.dto.RegisterReq req) {
-        // 1. 检查 username 是否已存在
-        Long userCount = sysUserMapper.selectCount(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.neusoft.neu23.neuhospital.system.entity.SysUserEntity>().eq("username", req.getUsername()));
+        if (!org.springframework.util.StringUtils.hasText(req.getPhone())) {
+            throw new IllegalArgumentException("手机号不能为空");
+        }
+
+        // 1. 检查手机号是否已被注册为账号
+        Long userCount = sysUserMapper.selectCount(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.neusoft.neu23.neuhospital.system.entity.SysUserEntity>().eq("username", req.getPhone()));
         if (userCount > 0) {
-            throw new IllegalArgumentException("该用户名已被注册");
+            throw new IllegalArgumentException("该手机号已注册，请直接登录");
         }
 
         // 2. 检查手机号或身份证是否已在患者表中存在
         Long patientCount = patientMapper.selectCount(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.neusoft.neu23.neuhospital.patient.entity.PatientEntity>().eq("phone", req.getPhone()));
         if (patientCount > 0) {
-            throw new IllegalArgumentException("该手机号已建档，请直接登录");
+            throw new IllegalArgumentException("该手机号已在医院建档，请联系管理员或尝试找回密码");
         }
 
         // 3. 创建患者档案 (Patient)
@@ -166,9 +170,9 @@ public class AuthServiceImpl implements AuthService {
         patient.setUpdatedAt(java.time.LocalDateTime.now());
         patientMapper.insert(patient);
 
-        // 4. 创建系统账号 (SysUser)
+        // 4. 创建系统账号 (SysUser)，账号名直接使用手机号
         com.neusoft.neu23.neuhospital.system.entity.SysUserEntity user = new com.neusoft.neu23.neuhospital.system.entity.SysUserEntity();
-        user.setUsername(req.getUsername());
+        user.setUsername(req.getPhone()); // 直接用手机号做账号
         user.setPasswordHash(passwordEncoder.encode(req.getPassword())); // 使用 BCrypt 强哈希加密
         user.setUserType("PATIENT");
         user.setBizId(patient.getId()); // 关联业务ID

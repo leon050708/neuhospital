@@ -1,18 +1,32 @@
 package com.neusoft.neu23.neuhospital.patient.vo;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.LocalDate;
 
+@Schema(description = "患者档案响应")
 public class PatientVO {
+    @Schema(description = "患者主键 ID", example = "2001")
     private Long id;
+    @Schema(description = "患者编号", example = "P20240001")
     private String patientNo;
+    @Schema(description = "患者姓名", example = "王敏")
     private String name;
+    @Schema(description = "性别", example = "女")
     private String gender;
+    @Schema(description = "出生日期", example = "1998-03-12")
     private LocalDate birthDate;
+    @Schema(description = "手机号", example = "13800138000")
     private String phone;
+    @Schema(description = "身份证号", example = "210102199803121234")
     private String idCard;
+    @Schema(description = "血型", example = "A")
     private String bloodType;
+    @Schema(description = "过敏史摘要")
     private String allergySummary;
+    @Schema(description = "病史摘要")
     private String historySummary;
+    @Schema(description = "状态", example = "ACTIVE")
     private String status;
 
     // Getters and Setters
