@@ -12,8 +12,9 @@ import com.neusoft.neu23.neuhospital.registration.mapper.RegistrationMessageLogM
 import com.neusoft.neu23.neuhospital.registration.mapper.VisitQueueMapper;
 import com.neusoft.neu23.neuhospital.registration.service.RegistrationService;
 import org.redisson.api.RLock;
-import org.redisson.api.RScript;
 import org.redisson.api.RedissonClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -28,9 +29,13 @@ import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class RegistrationServiceImpl implements RegistrationService {
+
+    private static final Logger log = LoggerFactory.getLogger(RegistrationServiceImpl.class);
 
     @Autowired
     private RedissonClient redissonClient;
@@ -89,6 +94,7 @@ public class RegistrationServiceImpl implements RegistrationService {
                 redisTemplate.opsForValue().increment(stockKey);
                 throw new RuntimeException("手慢了，当前排班号源已满");
             }
+            registerRollbackCompensation(stockKey, scheduleId, patientId);
 
             // 4. 成功抢到 Redis 号源，写入本地消息表 (兜底，保证最终一致性)
             String msgId = UUID.randomUUID().toString().replace("-", "");
@@ -101,7 +107,10 @@ public class RegistrationServiceImpl implements RegistrationService {
             log.setRetryCount(0);
             log.setCreateTime(LocalDateTime.now());
             log.setUpdateTime(LocalDateTime.now());
-            messageLogMapper.insert(log);
+            int inserted = messageLogMapper.insertWithJsonPayload(log);
+            if (inserted != 1) {
+                throw new RuntimeException("挂号受理失败，请稍后重试");
+            }
 
             return msgId; // 返回挂号受理号（消息ID）
         } catch (InterruptedException e) {
@@ -112,6 +121,24 @@ public class RegistrationServiceImpl implements RegistrationService {
                 lock.unlock();
             }
         }
+    }
+
+    private void registerRollbackCompensation(String stockKey, Long scheduleId, Long patientId) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == TransactionSynchronization.STATUS_ROLLED_BACK) {
+                    try {
+                        redisTemplate.opsForValue().increment(stockKey);
+                    } catch (Exception ex) {
+                        log.error("挂号事务回滚后回补 Redis 库存失败, scheduleId={}, patientId={}", scheduleId, patientId, ex);
+                    }
+                }
+            }
+        });
     }
 
     @Override

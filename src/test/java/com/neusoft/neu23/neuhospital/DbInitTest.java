@@ -21,8 +21,7 @@ public class DbInitTest {
         try (Connection connection = dataSource.getConnection()) {
             ScriptUtils.executeSqlScript(connection, new FileSystemResource("E:/Smart-Medical/Backend/infra/postgres/init/001-init.sql"));
             ScriptUtils.executeSqlScript(connection, new FileSystemResource("E:/Smart-Medical/Backend/infra/postgres/init/002-auth-core-schema.sql"));
-            ScriptUtils.executeSqlScript(connection, new FileSystemResource("E:/Smart-Medical/Backend/src/main/resources/db/schema/phase1-minimal-business.sql"));
-            ScriptUtils.executeSqlScript(connection, new FileSystemResource("E:/Smart-Medical/Backend/src/main/resources/db/schema/phase2-inspection-pharmacy.sql"));
+            ScriptUtils.executeSqlScript(connection, new FileSystemResource("E:/Smart-Medical/Backend/infra/postgres/init/003-business-schema.sql"));
         }
     }
 }

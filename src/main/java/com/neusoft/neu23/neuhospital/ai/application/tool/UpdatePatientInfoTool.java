@@ -1,5 +1,6 @@
 package com.neusoft.neu23.neuhospital.ai.application.tool;
 
+import com.neusoft.neu23.neuhospital.ai.application.agent.AiAgentSessionContext;
 import com.neusoft.neu23.neuhospital.patient.dto.PatientUpdateReq;
 import com.neusoft.neu23.neuhospital.patient.service.PatientService;
 import com.neusoft.neu23.neuhospital.patient.vo.PatientVO;
@@ -18,17 +19,18 @@ public class UpdatePatientInfoTool {
         this.patientService = patientService;
     }
 
-    public record Request(Long patientId, String newAllergy, String newHistory) {}
+    public record Request(String newAllergy, String newHistory) {}
 
     @Bean
     @Description("动态结构化记忆更新工具。当你在与患者聊天时，如果患者明确陈述了新的【过敏原】（如芒果过敏、青霉素过敏）或新的【长期慢病/既往史】（如高血压、糖尿病），调用此工具将其永久写入患者的医疗档案中。")
     public Function<Request, String> updatePatientMemory() {
         return request -> {
             try {
+                Long patientId = AiAgentSessionContext.requirePatientId();
                 // 先查询已有数据
-                PatientVO patient = patientService.getPatientById(request.patientId());
+                PatientVO patient = patientService.getPatientById(patientId);
                 if (patient == null) {
-                    return "更新失败：未找到ID为 " + request.patientId() + " 的患者记录。";
+                    return "更新失败：未找到当前会话绑定的患者记录。";
                 }
 
                 PatientUpdateReq updateReq = new PatientUpdateReq();
@@ -67,7 +69,7 @@ public class UpdatePatientInfoTool {
                 updateReq.setBloodType(patient.getBloodType());
                 updateReq.setStatus(patient.getStatus());
 
-                patientService.updatePatient(request.patientId(), updateReq);
+                patientService.updatePatient(patientId, updateReq);
 
                 return "患者长期健康档案更新成功！新的过敏史和既往史已成功录入系统。";
             } catch (Exception e) {

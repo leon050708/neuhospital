@@ -6,9 +6,9 @@ spring:
     name: neuhospital
 
   datasource:
-    url: jdbc:postgresql://59.110.116.141:5432/postgres
-    username: leon
-    password: YcjQe%dFF2*Ds3z7mysH4w
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   data:
@@ -45,8 +45,8 @@ mybatis-plus:
 
 minio:
   endpoint: http://localhost:9005
-  access-key: minioadmin
-  secret-key: minioadmin
+  access-key: ${MINIO_ACCESS_KEY}
+  secret-key: ${MINIO_SECRET_KEY}
   bucket:
     ct-original: medical-ct-original
     ct-processed: medical-ct-processed
@@ -59,6 +59,8 @@ python:
     base-url: http://localhost:8001
 
 app:
+  ai:
+    chat:
   kafka:
     topic:
       image-analysis-request: medical.image.analysis.request
@@ -69,7 +71,7 @@ app:
 
 auth:
   jwt:
-    secret: smart-medical-jwt-secret-key-please-change-in-production-123456
+    secret: ${JWT_SECRET}
     issuer: smart-medical
     access-expiration-seconds: 7200
     refresh-expiration-seconds: 604800

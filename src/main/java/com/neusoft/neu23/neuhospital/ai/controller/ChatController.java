@@ -2,7 +2,9 @@ package com.neusoft.neu23.neuhospital.ai.controller;
 
 import com.neusoft.neu23.neuhospital.ai.application.agent.ChatAgentService;
 import com.neusoft.neu23.neuhospital.ai.domain.entity.AiChatSessionEntity;
+import com.neusoft.neu23.neuhospital.ai.dto.ChatSessionResp;
 import com.neusoft.neu23.neuhospital.ai.infrastructure.service.AiChatSessionService;
+import com.neusoft.neu23.neuhospital.auth.security.SecurityUtils;
 import com.neusoft.neu23.neuhospital.ai.dto.ChatMessageReq;
 import com.neusoft.neu23.neuhospital.ai.dto.ChatSessionCreateReq;
 import com.neusoft.neu23.neuhospital.common.response.Result;
@@ -22,28 +24,38 @@ public class ChatController {
     }
 
     @PostMapping
-    public Result<AiChatSessionEntity> createSession(@RequestBody ChatSessionCreateReq req) {
-        Long currentPatientId = com.neusoft.neu23.neuhospital.auth.security.SecurityUtils.getCurrentUserId();
-        if (currentPatientId == null) {
-            return Result.error(401, "未登录或会话已过期");
+    public Result<ChatSessionResp> createSession(@RequestBody ChatSessionCreateReq req) {
+        Long currentPatientId;
+        try {
+            currentPatientId = SecurityUtils.getCurrentPatientId();
+        } catch (IllegalStateException ex) {
+            return Result.error(401, ex.getMessage());
         }
-        AiChatSessionEntity session = chatAgentService.createSession(
-                currentPatientId,
-                req.getRegistrationId(),
-                req.getSessionType());
-        return Result.success(session);
+        try {
+            AiChatSessionEntity session = chatAgentService.createSession(
+                    currentPatientId,
+                    req.getRegistrationId(),
+                    req.getSessionType());
+            return Result.success(ChatSessionResp.from(session));
+        } catch (IllegalArgumentException ex) {
+            return Result.error(404, ex.getMessage());
+        }
     }
 
-    @PostMapping("/{id}/messages")
-    public Result<String> sendMessage(@PathVariable("id") Long sessionId,
+    @PostMapping("/{sessionNo}/messages")
+    public Result<String> sendMessage(@PathVariable("sessionNo") String sessionNo,
                                       @RequestBody ChatMessageReq req) {
-        AiChatSessionEntity session = sessionService.getById(sessionId);
-        if (session == null) {
-            return Result.error(404, "会话不存在");
+        Long currentPatientId;
+        try {
+            currentPatientId = SecurityUtils.getCurrentPatientId();
+        } catch (IllegalStateException ex) {
+            return Result.error(401, ex.getMessage());
         }
-
-        String response = chatAgentService.chat(sessionId, req.getContent());
-        
-        return Result.success(response);
+        try {
+            String response = chatAgentService.chat(sessionNo, currentPatientId, req.getContent());
+            return Result.success(response);
+        } catch (IllegalArgumentException ex) {
+            return Result.error(404, ex.getMessage());
+        }
     }
 }

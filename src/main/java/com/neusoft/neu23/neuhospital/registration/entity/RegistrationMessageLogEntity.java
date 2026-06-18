@@ -4,8 +4,6 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 
 @TableName(value = "registration_message_log", autoResultMap = true)
 public class RegistrationMessageLogEntity {
@@ -14,7 +12,6 @@ public class RegistrationMessageLogEntity {
     private String msgId;
     private Long scheduleId;
     private Long patientId;
-    @TableField(typeHandler = JacksonTypeHandler.class)
     private String payload;
     private Integer status;
     private Integer retryCount;
