@@ -8,4 +8,5 @@ import com.neusoft.neu23.neuhospital.inspection.vo.InspectionResultVO;
 public interface InspectionResultService extends IService<InspectionResultEntity> {
     Long recordResult(InspectionResultCreateReq req);
     InspectionResultVO getResultDetail(Long id);
+    void confirmResult(Long id);
 }

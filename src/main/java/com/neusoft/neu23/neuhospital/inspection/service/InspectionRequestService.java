@@ -10,4 +10,5 @@ public interface InspectionRequestService extends IService<InspectionRequestEnti
     Long createRequest(InspectionRequestCreateReq req);
     InspectionRequestVO getRequestDetail(Long id);
     Page<InspectionRequestVO> getRequestsPage(Integer pageNo, Integer pageSize, Long patientId, Long doctorId);
+    void cancelRequest(Long id);
 }

@@ -1,6 +1,7 @@
 package com.neusoft.neu23.neuhospital.inspection.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
@@ -23,6 +24,7 @@ public class InspectionRequestEntity {
     private String inspectionItemName;
     private String sampleType;
     private Boolean urgentFlag;
+    @TableField(exist = false)
     private BigDecimal feeAmount;
     private String status;
     private String resultSummary;

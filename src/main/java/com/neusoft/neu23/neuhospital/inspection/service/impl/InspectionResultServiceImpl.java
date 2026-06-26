@@ -46,7 +46,7 @@ public class InspectionResultServiceImpl extends ServiceImpl<InspectionResultMap
         BeanUtils.copyProperties(req, entity);
         entity.setSummary(req.getResultSummary()); // Manually map resultSummary to summary
         entity.setReportNo("INSP" + System.currentTimeMillis());
-        entity.setStatus("CONFIRMED");
+        entity.setStatus("DRAFT");
         entity.setReportedAt(LocalDateTime.now());
         this.save(entity);
 
@@ -59,7 +59,7 @@ public class InspectionResultServiceImpl extends ServiceImpl<InspectionResultMap
             }
         }
 
-        request.setStatus("REPORTED");
+        request.setStatus("EXECUTING");
         request.setResultSummary(entity.getSummary());
         inspectionRequestService.updateById(request);
 
@@ -87,5 +87,27 @@ public class InspectionResultServiceImpl extends ServiceImpl<InspectionResultMap
         }).collect(Collectors.toList()));
 
         return vo;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void confirmResult(Long id) {
+        InspectionResultEntity entity = this.getById(id);
+        if (entity == null) {
+            throw new BusinessException(404, "检验结果不存在");
+        }
+        if ("CONFIRMED".equals(entity.getStatus())) {
+            throw new BusinessException(400, "结果已确认");
+        }
+        entity.setStatus("CONFIRMED");
+        entity.setReportedAt(LocalDateTime.now());
+        this.updateById(entity);
+
+        InspectionRequestEntity request = inspectionRequestService.getById(entity.getInspectionRequestId());
+        if (request != null) {
+            request.setStatus("REPORTED");
+            request.setResultSummary(entity.getSummary());
+            inspectionRequestService.updateById(request);
+        }
     }
 }

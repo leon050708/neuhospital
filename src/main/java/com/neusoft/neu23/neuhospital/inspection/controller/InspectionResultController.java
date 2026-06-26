@@ -24,4 +24,10 @@ public class InspectionResultController {
     public Result<InspectionResultVO> getResultDetail(@PathVariable Long id) {
         return Result.success(inspectionResultService.getResultDetail(id));
     }
+
+    @PostMapping("/{id}/confirm")
+    public Result<Void> confirmResult(@PathVariable Long id) {
+        inspectionResultService.confirmResult(id);
+        return Result.success(null);
+    }
 }

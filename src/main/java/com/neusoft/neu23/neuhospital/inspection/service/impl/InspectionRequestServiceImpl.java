@@ -63,4 +63,18 @@ public class InspectionRequestServiceImpl extends ServiceImpl<InspectionRequestM
 
         return voPage;
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelRequest(Long id) {
+        InspectionRequestEntity entity = this.getById(id);
+        if (entity == null) {
+            throw new BusinessException(404, "检验申请不存在");
+        }
+        if (!"NEW".equals(entity.getStatus())) {
+            throw new BusinessException(400, "只有新建状态的申请可以取消");
+        }
+        entity.setStatus("CANCELLED");
+        this.updateById(entity);
+    }
 }
