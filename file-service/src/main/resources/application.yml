@@ -1,0 +1,55 @@
+server:
+  port: ${FILE_SERVER_PORT:10020}
+
+spring:
+  application:
+    name: file-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+  servlet:
+    multipart:
+      max-file-size: 1GB
+      max-request-size: 1GB
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://59.110.116.141:5432/postgres}
+    username: ${DB_USERNAME:leon}
+    password: ${DB_PASSWORD:YcjQe%dFF2*Ds3z7mysH4w}
+    driver-class-name: org.postgresql.Driver
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9005}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket:
+    ct-original: medical-ct-original
+    ct-processed: medical-ct-processed
+    ct-heatmap: medical-ct-heatmap
+    report: medical-report
+    knowledge-docs: knowledge-docs
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

@@ -1,0 +1,151 @@
+server:
+  port: ${GATEWAY_SERVER_PORT:10010}
+  max-http-request-header-size: 32KB
+
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+    gateway:
+      routes:
+        - id: backend-docs
+          uri: lb://backend-service
+          predicates:
+            - Path=/v3/api-docs/**,/swagger-ui/**,/swagger-ui.html,/doc.html,/webjars/**
+
+        - id: backend-auth-login
+          uri: lb://backend-service
+          predicates:
+            - Path=/api/auth/login
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@userOrIpKeyResolver}"
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+
+        - id: backend-registration-quick
+          uri: ${REGISTRATION_SERVICE_URI:lb://backend-service}
+          predicates:
+            - Path=/api/registrations/quick
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@userOrIpKeyResolver}"
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+
+        # The routes below are grouped by real controller prefixes in the current codebase.
+        # They all point to backend-service for now; when a domain is split out, only its uri changes.
+        - id: backend-auth-domain
+          uri: lb://backend-service
+          predicates:
+            - Path=/api/auth/**,/api/system/**
+
+        - id: backend-patient-domain
+          uri: ${PATIENT_SERVICE_URI:lb://backend-service}
+          predicates:
+            - Path=/api/patients/**
+
+        - id: backend-doctor-domain
+          uri: ${DOCTOR_SERVICE_URI:lb://backend-service}
+          predicates:
+            - Path=/api/doctors/**,/api/departments/**
+
+        - id: backend-schedule-domain
+          uri: ${REGISTRATION_SERVICE_URI:lb://backend-service}
+          predicates:
+            - Path=/api/schedules/**
+
+        - id: backend-registration-domain
+          uri: ${REGISTRATION_SERVICE_URI:lb://backend-service}
+          predicates:
+            - Path=/api/registrations/**,/api/queue/**
+
+        - id: backend-outpatient-domain
+          uri: lb://backend-service
+          predicates:
+            - Path=/api/outpatient/**
+
+        - id: backend-inspection-domain
+          uri: lb://backend-service
+          predicates:
+            - Path=/api/check-requests/**,/api/check-results/**,/api/inspection-requests/**,/api/inspection-results/**,/api/disposal-requests/**,/api/ct-analysis/**
+
+        - id: backend-pharmacy-domain
+          uri: lb://backend-service
+          predicates:
+            - Path=/api/drugs/**,/api/prescriptions/**,/api/pharmacy/**
+
+        - id: backend-payment-domain
+          uri: lb://backend-service
+          predicates:
+            - Path=/api/payment/**
+
+        - id: backend-file-domain
+          uri: ${FILE_SERVICE_URI:lb://backend-service}
+          predicates:
+            - Path=/api/files/**
+
+        - id: backend-ai-domain
+          uri: lb://backend-service
+          predicates:
+            - Path=/api/ai/**
+
+        - id: backend-api
+          uri: lb://backend-service
+          predicates:
+            - Path=/api/**
+
+      default-filters:
+        - AddRequestHeader=X-Request-Source, gateway-service
+
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            exposedHeaders:
+              - Authorization
+              - X-Trace-Id
+            allowCredentials: true
+            maxAge: 3600
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6380}
+      timeout: 5s
+
+  codec:
+    max-in-memory-size: 10MB
+
+auth:
+  jwt:
+    secret: ${JWT_SECRET:smart-medical-jwt-secret-key-please-change-in-production-123456}
+    issuer: ${JWT_ISSUER:smart-medical}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
