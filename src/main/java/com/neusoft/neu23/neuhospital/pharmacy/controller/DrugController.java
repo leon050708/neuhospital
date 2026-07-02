@@ -9,6 +9,7 @@ import com.neusoft.neu23.neuhospital.pharmacy.dto.DrugStockAdjustReq;
 import com.neusoft.neu23.neuhospital.pharmacy.service.DrugInfoService;
 import com.neusoft.neu23.neuhospital.pharmacy.vo.DrugInfoVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,18 +20,21 @@ public class DrugController {
     private DrugInfoService drugInfoService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','PHARMACIST')")
     public Result<Long> createDrug(@RequestBody DrugInfoCreateReq req) {
         Long id = drugInfoService.createDrug(req);
         return Result.success(id);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','PHARMACIST')")
     public Result<Void> updateDrug(@PathVariable Long id, @RequestBody DrugInfoUpdateReq req) {
         drugInfoService.updateDrug(id, req);
         return Result.success(null);
     }
 
     @PostMapping("/{id}/stock-adjust")
+    @PreAuthorize("hasAnyRole('ADMIN','PHARMACIST')")
     public Result<Void> adjustStock(@PathVariable Long id, @RequestBody DrugStockAdjustReq req) {
         drugInfoService.adjustStock(id, req.getAdjustQuantity());
         return Result.success(null);

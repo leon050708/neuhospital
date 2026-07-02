@@ -7,6 +7,7 @@ import com.neusoft.neu23.neuhospital.registration.dto.DoctorScheduleCreateReq;
 import com.neusoft.neu23.neuhospital.registration.dto.DoctorScheduleUpdateReq;
 import com.neusoft.neu23.neuhospital.registration.service.DoctorScheduleService;
 import com.neusoft.neu23.neuhospital.registration.vo.DoctorScheduleVO;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -22,18 +23,21 @@ public class DoctorScheduleController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGEMENT','REGISTRATION_CLERK')")
     public Result<DoctorScheduleVO> createSchedule(@RequestBody DoctorScheduleCreateReq req) {
         DoctorScheduleVO vo = doctorScheduleService.createSchedule(req);
         return Result.success(vo);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGEMENT','REGISTRATION_CLERK')")
     public Result<DoctorScheduleVO> updateSchedule(@PathVariable("id") Long id, @RequestBody DoctorScheduleUpdateReq req) {
         DoctorScheduleVO vo = doctorScheduleService.updateSchedule(id, req);
         return Result.success(vo);
     }
 
     @PostMapping("/{id}/close")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGEMENT','REGISTRATION_CLERK')")
     public Result<Void> closeSchedule(@PathVariable("id") Long id) {
         doctorScheduleService.closeSchedule(id);
         return Result.success(null);

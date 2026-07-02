@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public class DoctorController {
 
     @PostMapping
     @Operation(summary = "新增医生", description = "创建一条新的医生档案记录。")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGEMENT','REGISTRATION_CLERK')")
     public Result<DoctorVO> createDoctor(@RequestBody DoctorCreateReq req) {
         DoctorVO vo = doctorService.createDoctor(req);
         return Result.success(vo);
@@ -43,6 +45,7 @@ public class DoctorController {
 
     @PutMapping("/{id}")
     @Operation(summary = "更新医生信息", description = "根据医生 ID 修改医生资料。")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGEMENT','REGISTRATION_CLERK')")
     public Result<DoctorVO> updateDoctor(
             @Parameter(description = "医生主键 ID", required = true) @PathVariable("id") Long id,
             @RequestBody DoctorUpdateReq req) {

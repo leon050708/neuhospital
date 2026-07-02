@@ -11,6 +11,7 @@ import com.neusoft.neu23.neuhospital.auth.security.RefreshSession;
 import com.neusoft.neu23.neuhospital.auth.security.UserSessionBinding;
 import com.neusoft.neu23.neuhospital.auth.vo.LoginResponse;
 import com.neusoft.neu23.neuhospital.auth.vo.RefreshTokenResponse;
+import com.neusoft.neu23.neuhospital.system.service.SysUserRoleService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +33,9 @@ public class AuthServiceImpl implements AuthService {
 
     @org.springframework.beans.factory.annotation.Autowired
     private com.neusoft.neu23.neuhospital.system.mapper.SysUserMapper sysUserMapper;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private SysUserRoleService sysUserRoleService;
 
     private final AuthAccountProvider accountProvider;
     private final LoginSessionStore sessionStore;
@@ -181,7 +185,9 @@ public class AuthServiceImpl implements AuthService {
         user.setStatus("ENABLED");
         user.setCreatedAt(java.time.LocalDateTime.now());
         user.setUpdatedAt(java.time.LocalDateTime.now());
+        user.setDeleted(false);
         sysUserMapper.insert(user);
+        sysUserRoleService.bindSingleRoleIfAbsent(user.getId(), "PATIENT", "患者");
     }
 
     @Override

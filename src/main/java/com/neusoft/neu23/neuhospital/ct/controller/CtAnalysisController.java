@@ -5,6 +5,7 @@ import com.neusoft.neu23.neuhospital.ct.dto.CtAnalysisTaskCreateReq;
 import com.neusoft.neu23.neuhospital.ct.service.CtAnalysisService;
 import com.neusoft.neu23.neuhospital.ct.vo.CtAnalysisResultVO;
 import com.neusoft.neu23.neuhospital.ct.vo.CtAnalysisTaskVO;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,11 +19,13 @@ public class CtAnalysisController {
     }
 
     @PostMapping("/tasks")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<CtAnalysisTaskVO> createTask(@RequestBody CtAnalysisTaskCreateReq req) {
         return Result.success(ctAnalysisService.createTask(req));
     }
 
     @GetMapping("/results/{taskId}")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<CtAnalysisResultVO> getResult(@PathVariable("taskId") Long taskId) {
         return Result.success(ctAnalysisService.getResult(taskId));
     }

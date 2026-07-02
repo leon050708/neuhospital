@@ -7,6 +7,7 @@ import com.neusoft.neu23.neuhospital.inspection.dto.CheckRequestCreateReq;
 import com.neusoft.neu23.neuhospital.inspection.service.CheckRequestService;
 import com.neusoft.neu23.neuhospital.inspection.vo.CheckRequestVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,17 +18,20 @@ public class CheckRequestController {
     private CheckRequestService checkRequestService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<Long> createRequest(@RequestBody CheckRequestCreateReq req) {
         Long id = checkRequestService.createRequest(req);
         return Result.success(id);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<CheckRequestVO> getRequestDetail(@PathVariable Long id) {
         return Result.success(checkRequestService.getRequestDetail(id));
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<PageResult<CheckRequestVO>> getRequestsPage(
             @RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
@@ -38,6 +42,7 @@ public class CheckRequestController {
     }
 
     @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<Void> cancelRequest(@PathVariable Long id) {
         checkRequestService.cancelRequest(id);
         return Result.success(null);

@@ -1,9 +1,11 @@
 package com.neusoft.neu23.neuhospital.registration.controller;
 
+import com.neusoft.neu23.neuhospital.auth.security.SecurityUtils;
 import com.neusoft.neu23.neuhospital.registration.service.QueueService;
 import com.neusoft.neu23.neuhospital.registration.vo.QueueItemVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -18,11 +20,9 @@ public class QueueController {
     private QueueService queueService;
 
     @GetMapping("/doctor/me")
-    public ResponseEntity<?> getDoctorQueue(
-            @RequestHeader(value = "X-User-Id", required = false) Long doctorId) {
-        if (doctorId == null) {
-            doctorId = 30001L; // Mock doctorId if not provided
-        }
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<?> getDoctorQueue() {
+        Long doctorId = SecurityUtils.getCurrentDoctorId();
         List<QueueItemVO> list = queueService.getDoctorQueue(doctorId);
         Map<String, Object> res = new HashMap<>();
         res.put("code", 200);
@@ -32,11 +32,10 @@ public class QueueController {
     }
 
     @PostMapping("/{id}/call")
-    public ResponseEntity<?> callPatient(
-            @PathVariable Long id,
-            @RequestHeader(value = "X-User-Id", required = false) Long doctorId) {
-        if (doctorId == null) doctorId = 30001L;
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<?> callPatient(@PathVariable Long id) {
         try {
+            Long doctorId = SecurityUtils.getCurrentDoctorId();
             queueService.callPatient(id, doctorId);
             Map<String, Object> res = new HashMap<>();
             res.put("code", 200);
@@ -51,11 +50,10 @@ public class QueueController {
     }
 
     @PostMapping("/{id}/skip")
-    public ResponseEntity<?> skipPatient(
-            @PathVariable Long id,
-            @RequestHeader(value = "X-User-Id", required = false) Long doctorId) {
-        if (doctorId == null) doctorId = 30001L;
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<?> skipPatient(@PathVariable Long id) {
         try {
+            Long doctorId = SecurityUtils.getCurrentDoctorId();
             queueService.skipPatient(id, doctorId);
             Map<String, Object> res = new HashMap<>();
             res.put("code", 200);
@@ -70,11 +68,10 @@ public class QueueController {
     }
 
     @PostMapping("/{id}/finish")
-    public ResponseEntity<?> finishPatient(
-            @PathVariable Long id,
-            @RequestHeader(value = "X-User-Id", required = false) Long doctorId) {
-        if (doctorId == null) doctorId = 30001L;
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<?> finishPatient(@PathVariable Long id) {
         try {
+            Long doctorId = SecurityUtils.getCurrentDoctorId();
             queueService.finishPatient(id, doctorId);
             Map<String, Object> res = new HashMap<>();
             res.put("code", 200);

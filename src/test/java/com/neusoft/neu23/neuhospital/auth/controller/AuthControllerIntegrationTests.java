@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaQuery;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -80,7 +81,8 @@ class AuthControllerIntegrationTests {
 
     @Test
     void loginShouldReadUserAndRoleFromDatabase() throws Exception {
-        Long departmentId = createDepartment("CARD-" + System.nanoTime(), "心内科");
+        long suffix = System.nanoTime();
+        Long departmentId = createDepartment("CARD-" + suffix, "心内科" + suffix);
         Long doctorId = createDoctor("DOC-" + System.nanoTime(), "doctor-db-" + System.nanoTime(), departmentId);
         Long roleId = createRole("DOCTOR", "医生");
         String username = "doctor_db_" + System.nanoTime();
@@ -136,6 +138,12 @@ class AuthControllerIntegrationTests {
     }
 
     private Long createRole(String roleCode, String roleName) {
+        SysRoleEntity existing = sysRoleMapper.selectOne(lambdaQuery(SysRoleEntity.class)
+                .eq(SysRoleEntity::getRoleCode, roleCode)
+                .last("limit 1"));
+        if (existing != null) {
+            return existing.getId();
+        }
         SysRoleEntity entity = new SysRoleEntity();
         entity.setRoleCode(roleCode);
         entity.setRoleName(roleName);

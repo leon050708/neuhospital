@@ -9,8 +9,10 @@ import com.neusoft.neu23.neuhospital.patient.entity.PatientEntity;
 import com.neusoft.neu23.neuhospital.patient.mapper.PatientMapper;
 import com.neusoft.neu23.neuhospital.patient.service.PatientService;
 import com.neusoft.neu23.neuhospital.patient.vo.PatientVO;
+import com.neusoft.neu23.neuhospital.system.service.SysUserRoleService;
 import com.neusoft.neu23.neuhospital.system.entity.SysUserEntity;
 import com.neusoft.neu23.neuhospital.system.mapper.SysUserMapper;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -25,10 +27,17 @@ public class PatientServiceImpl implements PatientService {
 
     private final PatientMapper patientMapper;
     private final SysUserMapper sysUserMapper;
+    private final SysUserRoleService sysUserRoleService;
+    private final PasswordEncoder passwordEncoder;
 
-    public PatientServiceImpl(PatientMapper patientMapper, SysUserMapper sysUserMapper) {
+    public PatientServiceImpl(PatientMapper patientMapper,
+                              SysUserMapper sysUserMapper,
+                              SysUserRoleService sysUserRoleService,
+                              PasswordEncoder passwordEncoder) {
         this.patientMapper = patientMapper;
         this.sysUserMapper = sysUserMapper;
+        this.sysUserRoleService = sysUserRoleService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -72,7 +81,7 @@ public class PatientServiceImpl implements PatientService {
         // 4. 联动创建 SysUser 登录账户
         SysUserEntity user = new SysUserEntity();
         user.setUsername(req.getPhone()); // 默认使用手机号作为登录名
-        user.setPasswordHash("$2a$10$xyz123"); // 初始密码加密，这里简单写死，实际应调用 PasswordEncoder
+        user.setPasswordHash(passwordEncoder.encode("123456")); // 默认初始密码，后续可改为重置密码流程
         user.setUserType("PATIENT");
         user.setBizId(entity.getId());
         user.setRealName(entity.getName());
@@ -80,9 +89,9 @@ public class PatientServiceImpl implements PatientService {
         user.setStatus("ENABLED");
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
+        user.setDeleted(false);
         sysUserMapper.insert(user);
-
-        // TODO: 可选，向 sys_user_role 表中插入关联角色(PATIENT)
+        sysUserRoleService.bindSingleRoleIfAbsent(user.getId(), "PATIENT", "患者");
 
         // 5. 封装返回值
         PatientVO vo = new PatientVO();

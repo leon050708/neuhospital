@@ -7,6 +7,7 @@ import com.neusoft.neu23.neuhospital.inspection.dto.DisposalRequestCreateReq;
 import com.neusoft.neu23.neuhospital.inspection.service.DisposalRequestService;
 import com.neusoft.neu23.neuhospital.inspection.vo.DisposalRequestVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,17 +18,20 @@ public class DisposalRequestController {
     private DisposalRequestService disposalRequestService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<Long> createRequest(@RequestBody DisposalRequestCreateReq req) {
         Long id = disposalRequestService.createRequest(req);
         return Result.success(id);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<DisposalRequestVO> getRequestDetail(@PathVariable Long id) {
         return Result.success(disposalRequestService.getRequestDetail(id));
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<PageResult<DisposalRequestVO>> getRequestsPage(
             @RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
@@ -38,12 +42,14 @@ public class DisposalRequestController {
     }
 
     @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<Void> cancelRequest(@PathVariable Long id) {
         disposalRequestService.cancelRequest(id);
         return Result.success(null);
     }
 
     @PostMapping("/{id}/finish")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<Void> finishRequest(@PathVariable Long id) {
         disposalRequestService.finishRequest(id);
         return Result.success(null);

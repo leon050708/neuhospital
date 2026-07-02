@@ -5,6 +5,7 @@ import com.neusoft.neu23.neuhospital.doctor.dto.DepartmentCreateReq;
 import com.neusoft.neu23.neuhospital.doctor.dto.DepartmentUpdateReq;
 import com.neusoft.neu23.neuhospital.doctor.service.DepartmentService;
 import com.neusoft.neu23.neuhospital.doctor.vo.DepartmentVO;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +21,7 @@ public class DepartmentController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGEMENT','REGISTRATION_CLERK')")
     public Result<DepartmentVO> createDepartment(@RequestBody DepartmentCreateReq req) {
         DepartmentVO vo = departmentService.createDepartment(req);
         return Result.success(vo);
@@ -32,6 +34,7 @@ public class DepartmentController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGEMENT','REGISTRATION_CLERK')")
     public Result<DepartmentVO> updateDepartment(@PathVariable("id") Long id, @RequestBody DepartmentUpdateReq req) {
         DepartmentVO vo = departmentService.updateDepartment(id, req);
         return Result.success(vo);

@@ -7,6 +7,7 @@ import com.neusoft.neu23.neuhospital.inspection.dto.InspectionRequestCreateReq;
 import com.neusoft.neu23.neuhospital.inspection.service.InspectionRequestService;
 import com.neusoft.neu23.neuhospital.inspection.vo.InspectionRequestVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,17 +18,20 @@ public class InspectionRequestController {
     private InspectionRequestService inspectionRequestService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<Long> createRequest(@RequestBody InspectionRequestCreateReq req) {
         Long id = inspectionRequestService.createRequest(req);
         return Result.success(id);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<InspectionRequestVO> getRequestDetail(@PathVariable Long id) {
         return Result.success(inspectionRequestService.getRequestDetail(id));
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<PageResult<InspectionRequestVO>> getRequestsPage(
             @RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
@@ -38,6 +42,7 @@ public class InspectionRequestController {
     }
 
     @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
     public Result<Void> cancelRequest(@PathVariable Long id) {
         inspectionRequestService.cancelRequest(id);
         return Result.success(null);

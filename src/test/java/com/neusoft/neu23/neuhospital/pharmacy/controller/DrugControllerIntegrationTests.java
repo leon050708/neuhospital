@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional // 保证每个测试后数据回滚
-@WithMockUser(username = "test-admin")
+@WithMockUser(username = "test-admin", roles = "ADMIN")
 public class DrugControllerIntegrationTests {
 
     @Autowired
