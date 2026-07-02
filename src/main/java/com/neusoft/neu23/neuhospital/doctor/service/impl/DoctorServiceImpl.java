@@ -13,6 +13,8 @@ import com.neusoft.neu23.neuhospital.doctor.service.DoctorService;
 import com.neusoft.neu23.neuhospital.doctor.vo.DoctorVO;
 import com.neusoft.neu23.neuhospital.system.entity.SysUserEntity;
 import com.neusoft.neu23.neuhospital.system.mapper.SysUserMapper;
+import com.neusoft.neu23.neuhospital.system.service.SysUserRoleService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -28,11 +30,19 @@ public class DoctorServiceImpl implements DoctorService {
     private final DoctorMapper doctorMapper;
     private final DepartmentMapper departmentMapper;
     private final SysUserMapper sysUserMapper;
+    private final SysUserRoleService sysUserRoleService;
+    private final PasswordEncoder passwordEncoder;
 
-    public DoctorServiceImpl(DoctorMapper doctorMapper, DepartmentMapper departmentMapper, SysUserMapper sysUserMapper) {
+    public DoctorServiceImpl(DoctorMapper doctorMapper,
+                             DepartmentMapper departmentMapper,
+                             SysUserMapper sysUserMapper,
+                             SysUserRoleService sysUserRoleService,
+                             PasswordEncoder passwordEncoder) {
         this.doctorMapper = doctorMapper;
         this.departmentMapper = departmentMapper;
         this.sysUserMapper = sysUserMapper;
+        this.sysUserRoleService = sysUserRoleService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -72,7 +82,7 @@ public class DoctorServiceImpl implements DoctorService {
         // 4. 联动创建 SysUser 账号
         SysUserEntity user = new SysUserEntity();
         user.setUsername(req.getPhone()); // 默认手机号登录
-        user.setPasswordHash("$2a$10$xyz123"); 
+        user.setPasswordHash(passwordEncoder.encode("123456"));
         user.setUserType("DOCTOR");
         user.setBizId(entity.getId());
         user.setRealName(entity.getName());
@@ -80,7 +90,9 @@ public class DoctorServiceImpl implements DoctorService {
         user.setStatus("ENABLED");
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
+        user.setDeleted(false);
         sysUserMapper.insert(user);
+        sysUserRoleService.bindSingleRoleIfAbsent(user.getId(), "DOCTOR", "医生");
 
         return convertToVO(entity, dept.getDeptName());
     }

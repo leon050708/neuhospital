@@ -1,6 +1,20 @@
 package com.neusoft.neu23.neuhospital.registration.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.neusoft.neu23.neuhospital.auth.security.SecurityUtils;
+import com.neusoft.neu23.neuhospital.common.exception.BusinessException;
+import com.neusoft.neu23.neuhospital.doctor.entity.DoctorEntity;
+import com.neusoft.neu23.neuhospital.doctor.mapper.DoctorMapper;
+import com.neusoft.neu23.neuhospital.payment.entity.PaymentItemEntity;
+import com.neusoft.neu23.neuhospital.payment.entity.PaymentOrderEntity;
+import com.neusoft.neu23.neuhospital.payment.entity.RefundRecordEntity;
+import com.neusoft.neu23.neuhospital.payment.mapper.PaymentItemMapper;
+import com.neusoft.neu23.neuhospital.payment.mapper.PaymentOrderMapper;
+import com.neusoft.neu23.neuhospital.payment.mapper.RefundRecordMapper;
+import com.neusoft.neu23.neuhospital.patient.entity.PatientEntity;
+import com.neusoft.neu23.neuhospital.patient.mapper.PatientMapper;
 import com.neusoft.neu23.neuhospital.registration.dto.RegistrationCreateReq;
 import com.neusoft.neu23.neuhospital.registration.entity.DoctorScheduleEntity;
 import com.neusoft.neu23.neuhospital.registration.entity.RegistrationEntity;
@@ -23,9 +37,11 @@ import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.annotation.PostConstruct;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -54,6 +70,21 @@ public class RegistrationServiceImpl implements RegistrationService {
     
     @Autowired
     private VisitQueueMapper visitQueueMapper;
+
+    @Autowired
+    private PaymentItemMapper paymentItemMapper;
+
+    @Autowired
+    private PaymentOrderMapper paymentOrderMapper;
+
+    @Autowired
+    private RefundRecordMapper refundRecordMapper;
+
+    @Autowired
+    private PatientMapper patientMapper;
+
+    @Autowired
+    private DoctorMapper doctorMapper;
 
     private DefaultRedisScript<Long> rateLimitScript;
 
@@ -85,6 +116,8 @@ public class RegistrationServiceImpl implements RegistrationService {
             if (!lock.tryLock(0, 5, TimeUnit.SECONDS)) {
                 throw new RuntimeException("您操作太快了，请稍后重试");
             }
+
+            ensureNoDuplicateRegistration(scheduleId, patientId);
 
             // 3. Redis 库存预扣减
             String stockKey = "schedule:stock:" + scheduleId;
@@ -144,10 +177,26 @@ public class RegistrationServiceImpl implements RegistrationService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void processRegistrationMessage(String msgId, Long scheduleId, Long patientId) {
+        RegistrationMessageLogEntity messageLog = messageLogMapper.selectById(msgId);
+        if (messageLog == null) {
+            throw new RuntimeException("挂号消息不存在，无法处理");
+        }
+        if (Integer.valueOf(2).equals(messageLog.getStatus())) {
+            return;
+        }
+        if (Integer.valueOf(3).equals(messageLog.getStatus())) {
+            return;
+        }
+        if (hasActiveRegistration(scheduleId, patientId, null)) {
+            markMessageFailed(messageLog, scheduleId);
+            return;
+        }
+
         // 这是消费者要执行的真实落盘逻辑
         DoctorScheduleEntity schedule = doctorScheduleMapper.selectById(scheduleId);
         if (schedule == null || schedule.getAvailableCount() <= 0) {
-            throw new RuntimeException("排班数据异常或已被占满，需要人工补偿回滚 Redis");
+            markMessageFailed(messageLog, scheduleId);
+            return;
         }
 
         // 1. 扣减数据库库存
@@ -171,8 +220,58 @@ public class RegistrationServiceImpl implements RegistrationService {
         
         // 插入挂号单，此时不加入接诊队列(VisitQueue)，等缴费成功后再分配 queueNo 并入队
         registrationMapper.insert(reg);
-        
-        // TODO: 状态扭转：在这里可以根据业务决定是否将 RegistrationMessageLog 更新为已消费，或者由别处处理。
+
+        messageLogMapper.update(null,
+                new LambdaUpdateWrapper<RegistrationMessageLogEntity>()
+                        .eq(RegistrationMessageLogEntity::getMsgId, messageLog.getMsgId())
+                        .set(RegistrationMessageLogEntity::getStatus, 2)
+                        .set(RegistrationMessageLogEntity::getUpdateTime, LocalDateTime.now()));
+    }
+
+    private void markMessageFailed(RegistrationMessageLogEntity messageLog, Long scheduleId) {
+        messageLogMapper.update(null,
+                new LambdaUpdateWrapper<RegistrationMessageLogEntity>()
+                        .eq(RegistrationMessageLogEntity::getMsgId, messageLog.getMsgId())
+                        .set(RegistrationMessageLogEntity::getStatus, 3)
+                        .set(RegistrationMessageLogEntity::getRetryCount,
+                                (messageLog.getRetryCount() == null ? 0 : messageLog.getRetryCount()) + 1)
+                        .set(RegistrationMessageLogEntity::getUpdateTime, LocalDateTime.now()));
+
+        try {
+            String stockKey = "schedule:stock:" + scheduleId;
+            redisTemplate.opsForValue().increment(stockKey);
+        } catch (Exception ex) {
+            log.error("挂号消息失败后回补 Redis 库存失败, scheduleId={}, msgId={}", scheduleId, messageLog.getMsgId(), ex);
+        }
+    }
+
+    private void ensureNoDuplicateRegistration(Long scheduleId, Long patientId) {
+        if (hasActiveRegistration(scheduleId, patientId, null)) {
+            throw new BusinessException(400, "当前排班您已挂号，请勿重复提交");
+        }
+        if (hasPendingRegistrationMessage(scheduleId, patientId)) {
+            throw new BusinessException(400, "当前排班挂号申请正在处理中，请勿重复提交");
+        }
+    }
+
+    private boolean hasActiveRegistration(Long scheduleId, Long patientId, Long excludeRegistrationId) {
+        LambdaQueryWrapper<RegistrationEntity> wrapper = new LambdaQueryWrapper<RegistrationEntity>()
+                .eq(RegistrationEntity::getScheduleId, scheduleId)
+                .eq(RegistrationEntity::getPatientId, patientId)
+                .ne(RegistrationEntity::getStatus, "CANCELLED")
+                .eq(RegistrationEntity::getDeleted, false);
+        if (excludeRegistrationId != null) {
+            wrapper.ne(RegistrationEntity::getId, excludeRegistrationId);
+        }
+        return registrationMapper.selectCount(wrapper) > 0;
+    }
+
+    private boolean hasPendingRegistrationMessage(Long scheduleId, Long patientId) {
+        LambdaQueryWrapper<RegistrationMessageLogEntity> wrapper = new LambdaQueryWrapper<RegistrationMessageLogEntity>()
+                .eq(RegistrationMessageLogEntity::getScheduleId, scheduleId)
+                .eq(RegistrationMessageLogEntity::getPatientId, patientId)
+                .in(RegistrationMessageLogEntity::getStatus, 0, 1);
+        return messageLogMapper.selectCount(wrapper) > 0;
     }
 
     @Override
@@ -180,8 +279,11 @@ public class RegistrationServiceImpl implements RegistrationService {
         Page<RegistrationEntity> page = new Page<>(pageNo, pageSize);
         QueryWrapper<RegistrationEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("patient_id", patientId);
+        wrapper.ne("status", "CANCELLED");
         wrapper.orderByDesc("created_at");
-        return registrationMapper.selectPage(page, wrapper);
+        Page<RegistrationEntity> result = registrationMapper.selectPage(page, wrapper);
+        enrichRegistrationNames(result.getRecords());
+        return result;
     }
 
     @Override
@@ -189,12 +291,35 @@ public class RegistrationServiceImpl implements RegistrationService {
         Page<RegistrationEntity> page = new Page<>(pageNo, pageSize);
         QueryWrapper<RegistrationEntity> wrapper = new QueryWrapper<>();
         wrapper.orderByDesc("created_at");
-        return registrationMapper.selectPage(page, wrapper);
+        Page<RegistrationEntity> result = registrationMapper.selectPage(page, wrapper);
+        enrichRegistrationNames(result.getRecords());
+        return result;
     }
 
     @Override
     public RegistrationEntity getRegistrationById(Long id) {
-        return registrationMapper.selectById(id);
+        RegistrationEntity registration = registrationMapper.selectById(id);
+        enrichRegistrationNames(Collections.singletonList(registration));
+        return registration;
+    }
+
+    private void enrichRegistrationNames(List<RegistrationEntity> registrations) {
+        if (registrations == null || registrations.isEmpty()) {
+            return;
+        }
+        for (RegistrationEntity registration : registrations) {
+            if (registration == null) {
+                continue;
+            }
+            PatientEntity patient = patientMapper.selectById(registration.getPatientId());
+            if (patient != null) {
+                registration.setPatientName(patient.getName());
+            }
+            DoctorEntity doctor = doctorMapper.selectById(registration.getDoctorId());
+            if (doctor != null) {
+                registration.setDoctorName(doctor.getName());
+            }
+        }
     }
 
     @Override
@@ -202,13 +327,16 @@ public class RegistrationServiceImpl implements RegistrationService {
     public void cancelRegistration(Long id, Long patientId) {
         RegistrationEntity reg = registrationMapper.selectById(id);
         if (reg == null) {
-            throw new RuntimeException("挂号单不存在");
+            throw new BusinessException(400, "挂号单不存在");
         }
         if (patientId != null && !reg.getPatientId().equals(patientId)) {
-            throw new RuntimeException("无权操作此挂号单");
+            throw new BusinessException(403, "无权操作此挂号单");
         }
         if (!"UNPAID".equals(reg.getStatus()) && !"PAID".equals(reg.getStatus()) && !"PENDING".equals(reg.getStatus())) {
-            throw new RuntimeException("当前状态不可退号");
+            throw new BusinessException(400, "当前状态不可退号");
+        }
+        if ("PAID".equals(reg.getStatus())) {
+            refundPaidRegistration(reg);
         }
 
         // 修改状态
@@ -227,6 +355,73 @@ public class RegistrationServiceImpl implements RegistrationService {
         // 回滚 Redis 库存
         String stockKey = "schedule:stock:" + reg.getScheduleId();
         redisTemplate.opsForValue().increment(stockKey);
+    }
+
+    private void refundPaidRegistration(RegistrationEntity reg) {
+        List<PaymentItemEntity> paidItems = paymentItemMapper.selectList(
+                new LambdaQueryWrapper<PaymentItemEntity>()
+                        .eq(PaymentItemEntity::getItemType, "REGISTRATION")
+                        .eq(PaymentItemEntity::getBizId, reg.getId())
+                        .eq(PaymentItemEntity::getDeleted, false)
+                        .eq(PaymentItemEntity::getStatus, "PAID")
+        );
+        if (paidItems == null || paidItems.isEmpty()) {
+            throw new BusinessException(400, "挂号单已支付，但未找到可退款的支付记录");
+        }
+
+        Long operatorId = SecurityUtils.getCurrentUserId();
+        LocalDateTime now = LocalDateTime.now();
+        for (PaymentItemEntity item : paidItems) {
+            PaymentOrderEntity order = paymentOrderMapper.selectById(item.getPaymentOrderId());
+            if (order == null) {
+                throw new BusinessException(400, "支付订单不存在，无法完成退号退款");
+            }
+            createRefundRecord(order.getId(), item.getAmount(), operatorId, now);
+            item.setStatus("REFUNDED");
+            item.setUpdatedAt(now);
+            item.setUpdatedBy(operatorId);
+            paymentItemMapper.updateById(item);
+            refreshOrderRefundStatus(order.getId(), operatorId, now);
+        }
+    }
+
+    private void createRefundRecord(Long paymentOrderId, BigDecimal refundAmount, Long operatorId, LocalDateTime now) {
+        RefundRecordEntity refundRecord = new RefundRecordEntity();
+        refundRecord.setPaymentOrderId(paymentOrderId);
+        refundRecord.setRefundNo("REF" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 8));
+        refundRecord.setRefundAmount(refundAmount);
+        refundRecord.setRefundReason("患者主动退号");
+        refundRecord.setOperatorId(operatorId);
+        refundRecord.setRefundTime(now);
+        refundRecord.setStatus("SUCCESS");
+        refundRecord.setCreatedAt(now);
+        refundRecord.setUpdatedAt(now);
+        refundRecord.setCreatedBy(operatorId);
+        refundRecord.setUpdatedBy(operatorId);
+        refundRecord.setDeleted(false);
+        refundRecordMapper.insert(refundRecord);
+    }
+
+    private void refreshOrderRefundStatus(Long orderId, Long operatorId, LocalDateTime now) {
+        List<PaymentItemEntity> orderItems = paymentItemMapper.selectList(
+                new LambdaQueryWrapper<PaymentItemEntity>()
+                        .eq(PaymentItemEntity::getPaymentOrderId, orderId)
+                        .eq(PaymentItemEntity::getDeleted, false)
+        );
+        boolean hasRefunded = orderItems.stream().anyMatch(item -> "REFUNDED".equals(item.getStatus()));
+        boolean allRefunded = !orderItems.isEmpty() && orderItems.stream().allMatch(item -> "REFUNDED".equals(item.getStatus()));
+        if (!hasRefunded) {
+            return;
+        }
+
+        PaymentOrderEntity order = paymentOrderMapper.selectById(orderId);
+        if (order == null) {
+            return;
+        }
+        order.setPayStatus(allRefunded ? "REFUNDED" : "PARTIAL_REFUND");
+        order.setUpdatedAt(now);
+        order.setUpdatedBy(operatorId);
+        paymentOrderMapper.updateById(order);
     }
 
     @Override

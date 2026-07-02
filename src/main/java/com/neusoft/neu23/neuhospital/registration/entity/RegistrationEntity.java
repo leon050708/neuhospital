@@ -1,6 +1,7 @@
 package com.neusoft.neu23.neuhospital.registration.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
@@ -33,6 +34,10 @@ public class RegistrationEntity {
     private Long createdBy;
     private Long updatedBy;
     private Boolean deleted;
+    @TableField(exist = false)
+    private String patientName;
+    @TableField(exist = false)
+    private String doctorName;
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -91,4 +96,10 @@ public class RegistrationEntity {
 
     public Boolean getDeleted() { return deleted; }
     public void setDeleted(Boolean deleted) { this.deleted = deleted; }
+
+    public String getPatientName() { return patientName; }
+    public void setPatientName(String patientName) { this.patientName = patientName; }
+
+    public String getDoctorName() { return doctorName; }
+    public void setDoctorName(String doctorName) { this.doctorName = doctorName; }
 }

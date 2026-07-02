@@ -5,8 +5,7 @@ import jakarta.validation.constraints.NotNull;
 public class RegistrationCreateReq {
     @NotNull(message = "排班ID不能为空")
     private Long scheduleId;
-    
-    @NotNull(message = "患者ID不能为空")
+
     private Long patientId;
     
     public Long getScheduleId() { return scheduleId; }

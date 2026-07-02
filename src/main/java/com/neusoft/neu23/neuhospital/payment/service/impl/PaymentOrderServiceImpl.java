@@ -126,15 +126,24 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
         if (req.getItems() == null || req.getItems().isEmpty()) {
             throw new BusinessException(400, "缴费明细不能为空");
         }
-        
+
         List<PaymentPendingItemVO> allPendings = getPendingPayments(req.getPatientId());
         BigDecimal totalAmount = BigDecimal.ZERO;
-        
+        LocalDateTime now = LocalDateTime.now();
+        String orderType = resolveOrderType(req.getItems());
+        Long registrationId = resolveRegistrationId(req.getItems());
+
         PaymentOrderEntity order = new PaymentOrderEntity();
         order.setOrderNo("PAY" + System.currentTimeMillis());
         order.setPatientId(req.getPatientId());
+        order.setRegistrationId(registrationId);
+        order.setOrderType(orderType);
+        order.setTotalAmount(BigDecimal.ZERO);
+        order.setPaidAmount(BigDecimal.ZERO);
         order.setPayStatus("UNPAID");
-        order.setCreatedAt(LocalDateTime.now());
+        order.setCreatedAt(now);
+        order.setUpdatedAt(now);
+        order.setDeleted(false);
         this.save(order);
 
         for (PaymentCreateReq.PaymentItemReq itemReq : req.getItems()) {
@@ -153,12 +162,16 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
             item.setQuantity(1);
             item.setUnitPrice(matchedVO.getAmount());
             item.setStatus("UNPAID");
+            item.setCreatedAt(now);
+            item.setUpdatedAt(now);
+            item.setDeleted(false);
             paymentItemMapper.insert(item);
-            
+
             totalAmount = totalAmount.add(matchedVO.getAmount());
         }
 
         order.setTotalAmount(totalAmount);
+        order.setUpdatedAt(LocalDateTime.now());
         this.updateById(order);
         return order.getId();
     }
@@ -172,8 +185,10 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
         }
 
         order.setPayStatus("PAID");
+        order.setPaidAmount(order.getTotalAmount());
         order.setPayTime(LocalDateTime.now());
         order.setPayChannel("MOCK_WECHAT");
+        order.setUpdatedAt(LocalDateTime.now());
         this.updateById(order);
 
         List<PaymentItemEntity> items = paymentItemMapper.selectList(
@@ -182,6 +197,7 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
         List<PaymentSuccessEvent.PaymentItemInfo> paidItemsList = new ArrayList<>();
         for (PaymentItemEntity item : items) {
             item.setStatus("PAID");
+            item.setUpdatedAt(LocalDateTime.now());
             paymentItemMapper.updateById(item);
             paidItemsList.add(new PaymentSuccessEvent.PaymentItemInfo(item.getItemType(), item.getBizId()));
         }
@@ -220,5 +236,21 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
             PaymentTimeoutEvent event = new PaymentTimeoutEvent(this, order.getOrderNo(), timeoutItemsList);
             eventPublisher.publishEvent(event);
         }
+    }
+
+    private String resolveOrderType(List<PaymentCreateReq.PaymentItemReq> items) {
+        if (items.size() == 1) {
+            return items.get(0).getItemType();
+        }
+        String firstType = items.get(0).getItemType();
+        boolean sameType = items.stream().allMatch(item -> firstType.equals(item.getItemType()));
+        return sameType ? firstType : "MIXED";
+    }
+
+    private Long resolveRegistrationId(List<PaymentCreateReq.PaymentItemReq> items) {
+        if (items.size() == 1 && "REGISTRATION".equals(items.get(0).getItemType())) {
+            return items.get(0).getBizId();
+        }
+        return null;
     }
 }
