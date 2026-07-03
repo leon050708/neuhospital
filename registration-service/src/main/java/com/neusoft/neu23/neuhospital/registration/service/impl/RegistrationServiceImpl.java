@@ -52,6 +52,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public class RegistrationServiceImpl implements RegistrationService {
 
     private static final Logger log = LoggerFactory.getLogger(RegistrationServiceImpl.class);
+    private static final int PENDING_MESSAGE_EXPIRE_MINUTES = 3;
 
     @Autowired
     private RedissonClient redissonClient;
@@ -101,6 +102,11 @@ public class RegistrationServiceImpl implements RegistrationService {
         Long scheduleId = req.getScheduleId();
         Long patientId = req.getPatientId();
 
+        DoctorScheduleEntity schedule = requireSchedulableSchedule(scheduleId);
+        expireStalePendingMessages(scheduleId, patientId);
+        schedule = requireSchedulableSchedule(scheduleId);
+        ensureRedisStockInitialized(schedule);
+
         // 1. 令牌桶限流检查
         String limitKey = "rate_limit:registration:" + scheduleId;
         Long result = redisTemplate.execute(rateLimitScript, Collections.singletonList(limitKey), "200");
@@ -123,9 +129,15 @@ public class RegistrationServiceImpl implements RegistrationService {
             String stockKey = "schedule:stock:" + scheduleId;
             Long stock = redisTemplate.opsForValue().decrement(stockKey);
             if (stock != null && stock < 0) {
-                // 扣成负数，把库存加回来保证Redis数据整洁
-                redisTemplate.opsForValue().increment(stockKey);
-                throw new RuntimeException("手慢了，当前排班号源已满");
+                Long repairedStock = repairRedisStock(schedule);
+                if (repairedStock != null && repairedStock > 0) {
+                    stock = redisTemplate.opsForValue().decrement(stockKey);
+                }
+                if (stock != null && stock < 0) {
+                    // 扣成负数，把库存加回来保证Redis数据整洁
+                    redisTemplate.opsForValue().increment(stockKey);
+                    throw new RuntimeException("手慢了，当前排班号源已满");
+                }
             }
             registerRollbackCompensation(stockKey, scheduleId, patientId);
 
@@ -174,6 +186,54 @@ public class RegistrationServiceImpl implements RegistrationService {
         });
     }
 
+    private DoctorScheduleEntity requireSchedulableSchedule(Long scheduleId) {
+        DoctorScheduleEntity schedule = doctorScheduleMapper.selectById(scheduleId);
+        if (schedule == null) {
+            throw new BusinessException(400, "排班不存在");
+        }
+        if (!"ENABLED".equals(schedule.getStatus())) {
+            throw new BusinessException(400, "当前排班暂不可预约");
+        }
+        Integer availableCount = schedule.getAvailableCount();
+        if (availableCount == null || availableCount <= 0) {
+            throw new BusinessException(400, "当前排班号源已满");
+        }
+        return schedule;
+    }
+
+    private void ensureRedisStockInitialized(DoctorScheduleEntity schedule) {
+        String stockKey = "schedule:stock:" + schedule.getId();
+        String currentValue = redisTemplate.opsForValue().get(stockKey);
+        if (currentValue != null) {
+            try {
+                long stock = Long.parseLong(currentValue);
+                if (stock >= 0) {
+                    return;
+                }
+            } catch (NumberFormatException ignored) {
+                // fall through and repair from database truth
+            }
+        }
+        repairRedisStock(schedule);
+    }
+
+    private Long repairRedisStock(DoctorScheduleEntity schedule) {
+        String stockKey = "schedule:stock:" + schedule.getId();
+        long pendingCount = countPendingMessagesForSchedule(schedule.getId());
+        int availableCount = schedule.getAvailableCount() == null ? 0 : schedule.getAvailableCount();
+        long repairedStock = Math.max(availableCount - pendingCount, 0);
+        redisTemplate.opsForValue().set(stockKey, String.valueOf(repairedStock));
+        return repairedStock;
+    }
+
+    private long countPendingMessagesForSchedule(Long scheduleId) {
+        return messageLogMapper.selectCount(
+                new LambdaQueryWrapper<RegistrationMessageLogEntity>()
+                        .eq(RegistrationMessageLogEntity::getScheduleId, scheduleId)
+                        .in(RegistrationMessageLogEntity::getStatus, 0, 1)
+        );
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void processRegistrationMessage(String msgId, Long scheduleId, Long patientId) {
@@ -217,6 +277,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         reg.setRegisteredAt(LocalDateTime.now());
         reg.setCreatedAt(LocalDateTime.now());
         reg.setUpdatedAt(LocalDateTime.now());
+        reg.setDeleted(false);
         
         // 插入挂号单，此时不加入接诊队列(VisitQueue)，等缴费成功后再分配 queueNo 并入队
         registrationMapper.insert(reg);
@@ -254,12 +315,47 @@ public class RegistrationServiceImpl implements RegistrationService {
         }
     }
 
+    private void expireStalePendingMessages(Long scheduleId, Long patientId) {
+        LocalDateTime expireBefore = LocalDateTime.now().minusMinutes(PENDING_MESSAGE_EXPIRE_MINUTES);
+        List<RegistrationMessageLogEntity> staleMessages = messageLogMapper.selectList(
+                new LambdaQueryWrapper<RegistrationMessageLogEntity>()
+                        .eq(RegistrationMessageLogEntity::getScheduleId, scheduleId)
+                        .eq(RegistrationMessageLogEntity::getPatientId, patientId)
+                        .in(RegistrationMessageLogEntity::getStatus, 0, 1)
+                        .lt(RegistrationMessageLogEntity::getCreateTime, expireBefore)
+        );
+        if (staleMessages == null || staleMessages.isEmpty()) {
+            return;
+        }
+
+        String stockKey = "schedule:stock:" + scheduleId;
+        for (RegistrationMessageLogEntity staleMessage : staleMessages) {
+            messageLogMapper.update(null,
+                    new LambdaUpdateWrapper<RegistrationMessageLogEntity>()
+                            .eq(RegistrationMessageLogEntity::getMsgId, staleMessage.getMsgId())
+                            .in(RegistrationMessageLogEntity::getStatus, 0, 1)
+                            .set(RegistrationMessageLogEntity::getStatus, 3)
+                            .set(RegistrationMessageLogEntity::getRetryCount,
+                                    (staleMessage.getRetryCount() == null ? 0 : staleMessage.getRetryCount()) + 1)
+                            .set(RegistrationMessageLogEntity::getUpdateTime, LocalDateTime.now()));
+            redisTemplate.opsForValue().increment(stockKey);
+            log.warn("清理挂号过期待处理消息, scheduleId={}, patientId={}, msgId={}",
+                    scheduleId, patientId, staleMessage.getMsgId());
+        }
+        DoctorScheduleEntity freshSchedule = doctorScheduleMapper.selectById(scheduleId);
+        if (freshSchedule != null) {
+            repairRedisStock(freshSchedule);
+        }
+    }
+
     private boolean hasActiveRegistration(Long scheduleId, Long patientId, Long excludeRegistrationId) {
         LambdaQueryWrapper<RegistrationEntity> wrapper = new LambdaQueryWrapper<RegistrationEntity>()
                 .eq(RegistrationEntity::getScheduleId, scheduleId)
                 .eq(RegistrationEntity::getPatientId, patientId)
                 .ne(RegistrationEntity::getStatus, "CANCELLED")
-                .eq(RegistrationEntity::getDeleted, false);
+                .and(query -> query.isNull(RegistrationEntity::getDeleted)
+                        .or()
+                        .eq(RegistrationEntity::getDeleted, false));
         if (excludeRegistrationId != null) {
             wrapper.ne(RegistrationEntity::getId, excludeRegistrationId);
         }

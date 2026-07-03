@@ -22,69 +22,139 @@ WHERE inspection_result_id IN (
     SELECT ir.id
     FROM inspection_result ir
     JOIN inspection_request req ON req.id = ir.inspection_request_id
-    WHERE req.registration_id IN (9601, 9602, 9603)
+    WHERE req.registration_id IN (
+        SELECT id FROM registration WHERE schedule_id IN (
+            SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+        )
+    )
 )
 OR id IN (9941, 9942, 9943, 9944, 9945, 9946, 9947, 9948, 9949, 9950, 9951, 9952, 9953, 9954);
 
 DELETE FROM inspection_result
 WHERE inspection_request_id IN (
-    SELECT id FROM inspection_request WHERE registration_id IN (9601, 9602, 9603)
+    SELECT id FROM inspection_request WHERE registration_id IN (
+        SELECT id FROM registration WHERE schedule_id IN (
+            SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+        )
+    )
 )
 OR id IN (9931, 9932, 9933, 9934);
 
 DELETE FROM check_result
 WHERE check_request_id IN (
-    SELECT id FROM check_request WHERE registration_id IN (9601, 9602, 9603)
+    SELECT id FROM check_request WHERE registration_id IN (
+        SELECT id FROM registration WHERE schedule_id IN (
+            SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+        )
+    )
 )
 OR id IN (9921, 9922, 9923, 9924);
 
 DELETE FROM refund_record
 WHERE payment_order_id IN (
-    SELECT id FROM payment_order WHERE registration_id IN (9601, 9602, 9603)
+    SELECT id FROM payment_order WHERE registration_id IN (
+        SELECT id FROM registration WHERE schedule_id IN (
+            SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+        )
+    )
+)
+OR payment_order_id IN (
+    SELECT id FROM payment_order WHERE patient_id IN (9301, 9302)
 );
 
 DELETE FROM payment_item
 WHERE payment_order_id IN (
-    SELECT id FROM payment_order WHERE registration_id IN (9601, 9602, 9603)
+    SELECT id FROM payment_order WHERE registration_id IN (
+        SELECT id FROM registration WHERE schedule_id IN (
+            SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+        )
+    )
+)
+OR payment_order_id IN (
+    SELECT id FROM payment_order WHERE patient_id IN (9301, 9302)
 );
 
 DELETE FROM drug_dispense_record
 WHERE prescription_id IN (
-    SELECT id FROM prescription WHERE registration_id IN (9601, 9602, 9603)
+    SELECT id FROM prescription WHERE registration_id IN (
+        SELECT id FROM registration WHERE schedule_id IN (
+            SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+        )
+    )
 );
 
 DELETE FROM prescription_item
 WHERE prescription_id IN (
-    SELECT id FROM prescription WHERE registration_id IN (9601, 9602, 9603)
+    SELECT id FROM prescription WHERE registration_id IN (
+        SELECT id FROM registration WHERE schedule_id IN (
+            SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+        )
+    )
 );
 
 DELETE FROM prescription
-WHERE registration_id IN (9601, 9602, 9603);
+WHERE registration_id IN (
+    SELECT id FROM registration WHERE schedule_id IN (
+        SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+    )
+);
 
 DELETE FROM payment_order
-WHERE registration_id IN (9601, 9602, 9603);
+WHERE registration_id IN (
+    SELECT id FROM registration WHERE schedule_id IN (
+        SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+    )
+)
+OR patient_id IN (9301, 9302);
 
 DELETE FROM disposal_request
-WHERE registration_id IN (9601, 9602, 9603);
+WHERE registration_id IN (
+    SELECT id FROM registration WHERE schedule_id IN (
+        SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+    )
+);
 
 DELETE FROM visit_queue
-WHERE registration_id IN (9601, 9602, 9603)
+WHERE registration_id IN (
+    SELECT id FROM registration WHERE schedule_id IN (
+        SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+    )
+)
 OR id IN (9701);
 
 DELETE FROM check_request
-WHERE registration_id IN (9601, 9602, 9603)
+WHERE registration_id IN (
+    SELECT id FROM registration WHERE schedule_id IN (
+        SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+    )
+)
 OR id IN (9901, 9902, 9903, 9904, 9905);
 
 DELETE FROM inspection_request
-WHERE registration_id IN (9601, 9602, 9603)
+WHERE registration_id IN (
+    SELECT id FROM registration WHERE schedule_id IN (
+        SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+    )
+)
 OR id IN (9911, 9912, 9913, 9914, 9915);
 
 DELETE FROM medical_record
-WHERE registration_id IN (9601, 9602, 9603);
+WHERE registration_id IN (
+    SELECT id FROM registration WHERE schedule_id IN (
+        SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+    )
+);
 
 DELETE FROM registration
-WHERE id IN (9601, 9602, 9603);
-DELETE FROM doctor_schedule WHERE id IN (9401, 9402, 9403, 9404, 9405, 9406, 9407, 9408, 9409, 9410, 9411, 9412);
+WHERE id IN (9601, 9602, 9603)
+OR schedule_id IN (
+    SELECT id FROM doctor_schedule WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+)
+OR schedule_id IN (9401, 9402, 9403, 9404, 9405, 9406, 9407, 9408, 9409, 9410, 9411, 9412);
+
+DELETE FROM doctor_schedule
+WHERE doctor_id IN (9201, 9202, 9203, 9204, 9205, 9206, 9207, 9208)
+OR id IN (9401, 9402, 9403, 9404, 9405, 9406, 9407, 9408, 9409, 9410, 9411, 9412);
 DELETE FROM sys_user_role
 WHERE user_id IN (
     SELECT id FROM sys_user WHERE username IN (
