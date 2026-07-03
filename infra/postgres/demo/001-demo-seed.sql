@@ -583,3 +583,10 @@ SET drug_code = EXCLUDED.drug_code,
     updated_at = CURRENT_TIMESTAMP;
 
 COMMIT;
+
+
+CREATE INDEX IF NOT EXISTS idx_doctor_schedule_department_date
+    ON doctor_schedule (department_id, schedule_date);
+
+CREATE INDEX IF NOT EXISTS idx_doctor_schedule_doctor_date
+    ON doctor_schedule (doctor_id, schedule_date);

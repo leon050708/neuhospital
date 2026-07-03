@@ -19,7 +19,11 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -125,7 +129,14 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
 
         doctorScheduleMapper.selectPage(page, wrapper);
 
-        List<DoctorScheduleVO> voList = page.getRecords().stream().map(this::fetchVO).collect(Collectors.toList());
+        Map<Long, DoctorEntity> doctorsById = loadDoctors(page.getRecords());
+        Map<Long, DepartmentEntity> departmentsById = loadDepartments(page.getRecords());
+        List<DoctorScheduleVO> voList = page.getRecords().stream()
+                .map(record -> convertToVO(
+                        record,
+                        doctorsById.get(record.getDoctorId()) != null ? doctorsById.get(record.getDoctorId()).getName() : "",
+                        departmentsById.get(record.getDepartmentId()) != null ? departmentsById.get(record.getDepartmentId()).getDeptName() : ""))
+                .collect(Collectors.toList());
 
         Page<DoctorScheduleVO> resultPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         resultPage.setRecords(voList);
@@ -138,6 +149,30 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         return convertToVO(entity, 
                 doctor != null ? doctor.getName() : "", 
                 dept != null ? dept.getDeptName() : "");
+    }
+
+    private Map<Long, DoctorEntity> loadDoctors(List<DoctorScheduleEntity> schedules) {
+        Set<Long> doctorIds = schedules.stream()
+                .map(DoctorScheduleEntity::getDoctorId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        if (doctorIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return doctorMapper.selectBatchIds(doctorIds).stream()
+                .collect(Collectors.toMap(DoctorEntity::getId, Function.identity()));
+    }
+
+    private Map<Long, DepartmentEntity> loadDepartments(List<DoctorScheduleEntity> schedules) {
+        Set<Long> departmentIds = schedules.stream()
+                .map(DoctorScheduleEntity::getDepartmentId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        if (departmentIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return departmentMapper.selectBatchIds(departmentIds).stream()
+                .collect(Collectors.toMap(DepartmentEntity::getId, Function.identity()));
     }
 
     private DoctorScheduleVO convertToVO(DoctorScheduleEntity entity, String doctorName, String deptName) {
