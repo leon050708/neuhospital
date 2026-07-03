@@ -1,6 +1,20 @@
 name: smart-medical
 
 services:
+  nacos:
+    image: nacos/nacos-server:v2.5.2
+    ports:
+      - "${NACOS_HTTP_HOST_PORT:-8848}:8848"
+      - "${NACOS_GRPC_CLIENT_HOST_PORT:-9848}:9848"
+      - "${NACOS_GRPC_RAFT_HOST_PORT:-9849}:9849"
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+    volumes:
+      - nacos_data:/home/nacos/data
+      - nacos_logs:/home/nacos/logs
+    restart: unless-stopped
+
   redis:
     image: redis:7.2-alpine
     ports:
@@ -51,6 +65,8 @@ services:
     restart: unless-stopped
 
 volumes:
+  nacos_data:
+  nacos_logs:
   redis_data:
   kafka_data:
   minio_data:

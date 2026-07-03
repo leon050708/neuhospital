@@ -5,8 +5,13 @@ spring:
   application:
     name: patient-service
   cloud:
+    service-registry:
+      auto-registration:
+        enabled: ${NACOS_DISCOVERY_ENABLED:true}
     nacos:
       discovery:
+        enabled: ${NACOS_DISCOVERY_ENABLED:true}
+        register-enabled: ${NACOS_DISCOVERY_ENABLED:true}
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
   datasource:
     url: ${DB_URL:jdbc:postgresql://59.110.116.141:5432/postgres}

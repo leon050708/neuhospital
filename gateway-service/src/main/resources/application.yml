@@ -8,6 +8,8 @@ spring:
   cloud:
     nacos:
       discovery:
+        enabled: ${NACOS_DISCOVERY_ENABLED:true}
+        register-enabled: ${NACOS_DISCOVERY_ENABLED:true}
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
     gateway:
       routes:
@@ -29,7 +31,7 @@ spring:
                 redis-rate-limiter.requestedTokens: 1
 
         - id: backend-registration-quick
-          uri: ${REGISTRATION_SERVICE_URI:lb://backend-service}
+          uri: ${REGISTRATION_SERVICE_URI:lb://registration-service}
           predicates:
             - Path=/api/registrations/quick
           filters:
@@ -40,30 +42,30 @@ spring:
                 redis-rate-limiter.burstCapacity: 20
                 redis-rate-limiter.requestedTokens: 1
 
-        # The routes below are grouped by real controller prefixes in the current codebase.
-        # They all point to backend-service for now; when a domain is split out, only its uri changes.
+        # Domains already split out default to their dedicated services.
+        # Remaining domains still route to backend-service until they are extracted.
         - id: backend-auth-domain
           uri: lb://backend-service
           predicates:
             - Path=/api/auth/**,/api/system/**
 
         - id: backend-patient-domain
-          uri: ${PATIENT_SERVICE_URI:lb://backend-service}
+          uri: ${PATIENT_SERVICE_URI:lb://patient-service}
           predicates:
             - Path=/api/patients/**
 
         - id: backend-doctor-domain
-          uri: ${DOCTOR_SERVICE_URI:lb://backend-service}
+          uri: ${DOCTOR_SERVICE_URI:lb://doctor-service}
           predicates:
             - Path=/api/doctors/**,/api/departments/**
 
         - id: backend-schedule-domain
-          uri: ${REGISTRATION_SERVICE_URI:lb://backend-service}
+          uri: ${REGISTRATION_SERVICE_URI:lb://registration-service}
           predicates:
             - Path=/api/schedules/**
 
         - id: backend-registration-domain
-          uri: ${REGISTRATION_SERVICE_URI:lb://backend-service}
+          uri: ${REGISTRATION_SERVICE_URI:lb://registration-service}
           predicates:
             - Path=/api/registrations/**,/api/queue/**
 
@@ -88,7 +90,7 @@ spring:
             - Path=/api/payment/**
 
         - id: backend-file-domain
-          uri: ${FILE_SERVICE_URI:lb://backend-service}
+          uri: ${FILE_SERVICE_URI:lb://file-service}
           predicates:
             - Path=/api/files/**
 
