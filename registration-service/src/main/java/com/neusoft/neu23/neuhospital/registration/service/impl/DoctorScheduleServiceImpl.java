@@ -7,11 +7,13 @@ import com.neusoft.neu23.neuhospital.doctor.entity.DepartmentEntity;
 import com.neusoft.neu23.neuhospital.doctor.entity.DoctorEntity;
 import com.neusoft.neu23.neuhospital.doctor.mapper.DepartmentMapper;
 import com.neusoft.neu23.neuhospital.doctor.mapper.DoctorMapper;
+import com.neusoft.neu23.neuhospital.registration.config.RegistrationScheduleProperties;
 import com.neusoft.neu23.neuhospital.registration.dto.DoctorScheduleCreateReq;
 import com.neusoft.neu23.neuhospital.registration.dto.DoctorScheduleUpdateReq;
 import com.neusoft.neu23.neuhospital.registration.entity.DoctorScheduleEntity;
 import com.neusoft.neu23.neuhospital.registration.mapper.DoctorScheduleMapper;
 import com.neusoft.neu23.neuhospital.registration.service.DoctorScheduleService;
+import com.neusoft.neu23.neuhospital.registration.support.ScheduleStockSupport;
 import com.neusoft.neu23.neuhospital.registration.vo.DoctorScheduleVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,17 +34,24 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
     private final DoctorScheduleMapper doctorScheduleMapper;
     private final DoctorMapper doctorMapper;
     private final DepartmentMapper departmentMapper;
+    private final RegistrationScheduleProperties scheduleProperties;
+    private final ScheduleStockSupport scheduleStockSupport;
 
-    public DoctorScheduleServiceImpl(DoctorScheduleMapper doctorScheduleMapper, DoctorMapper doctorMapper, DepartmentMapper departmentMapper) {
+    public DoctorScheduleServiceImpl(DoctorScheduleMapper doctorScheduleMapper,
+                                     DoctorMapper doctorMapper,
+                                     DepartmentMapper departmentMapper,
+                                     RegistrationScheduleProperties scheduleProperties,
+                                     ScheduleStockSupport scheduleStockSupport) {
         this.doctorScheduleMapper = doctorScheduleMapper;
         this.doctorMapper = doctorMapper;
         this.departmentMapper = departmentMapper;
+        this.scheduleProperties = scheduleProperties;
+        this.scheduleStockSupport = scheduleStockSupport;
     }
 
     @Override
     @Transactional
     public DoctorScheduleVO createSchedule(DoctorScheduleCreateReq req) {
-        // 校验医生和科室
         DoctorEntity doctor = doctorMapper.selectById(req.getDoctorId());
         if (doctor == null || !"ENABLED".equals(doctor.getStatus())) {
             throw new BusinessException("医生不存在或已停诊");
@@ -52,12 +61,12 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
             throw new BusinessException("科室不存在或已停用");
         }
 
-        // 防重校验：同一天同时段
         Long count = doctorScheduleMapper.selectCount(new QueryWrapper<DoctorScheduleEntity>()
                 .eq("doctor_id", req.getDoctorId())
                 .eq("schedule_date", req.getScheduleDate())
-                .eq("time_slot", req.getTimeSlot()));
-        if (count > 0) {
+                .eq("time_slot", req.getTimeSlot())
+                .eq("deleted", false));
+        if (count != null && count > 0) {
             throw new BusinessException("该医生在此时间段已有排班");
         }
 
@@ -67,14 +76,16 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         entity.setScheduleDate(req.getScheduleDate());
         entity.setTimeSlot(req.getTimeSlot());
         entity.setSourceCount(req.getSourceCount() != null ? req.getSourceCount() : 0);
-        entity.setAvailableCount(entity.getSourceCount()); // 初始可用等于总数
+        entity.setAvailableCount(entity.getSourceCount());
         entity.setFeeAmount(req.getFeeAmount());
         entity.setSourceType(req.getSourceType());
         entity.setStatus("ENABLED");
         entity.setCreatedAt(LocalDateTime.now());
         entity.setUpdatedAt(LocalDateTime.now());
+        entity.setDeleted(false);
 
         doctorScheduleMapper.insert(entity);
+        scheduleStockSupport.initializeStock(entity);
         return convertToVO(entity, doctor.getName(), dept.getDeptName());
     }
 
@@ -86,7 +97,6 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
             throw new BusinessException("排班记录不存在");
         }
 
-        // 简单处理：如果有已挂号的，修改总号源不能小于已经挂出去的号源
         if (req.getSourceCount() != null) {
             int usedCount = entity.getSourceCount() - entity.getAvailableCount();
             if (req.getSourceCount() < usedCount) {
@@ -96,12 +106,19 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
             entity.setAvailableCount(req.getSourceCount() - usedCount);
         }
 
-        if (req.getFeeAmount() != null) entity.setFeeAmount(req.getFeeAmount());
-        if (req.getSourceType() != null) entity.setSourceType(req.getSourceType());
-        if (req.getStatus() != null) entity.setStatus(req.getStatus());
+        if (req.getFeeAmount() != null) {
+            entity.setFeeAmount(req.getFeeAmount());
+        }
+        if (req.getSourceType() != null) {
+            entity.setSourceType(req.getSourceType());
+        }
+        if (req.getStatus() != null) {
+            entity.setStatus(req.getStatus());
+        }
 
         entity.setUpdatedAt(LocalDateTime.now());
         doctorScheduleMapper.updateById(entity);
+        scheduleStockSupport.syncStock(entity);
 
         return fetchVO(entity);
     }
@@ -118,14 +135,33 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
     }
 
     @Override
-    public Page<DoctorScheduleVO> getSchedulesPage(Integer pageNo, Integer pageSize, Long doctorId, Long departmentId, LocalDate scheduleDate, String timeSlot) {
+    public Page<DoctorScheduleVO> getSchedulesPage(Integer pageNo, Integer pageSize, Long doctorId,
+                                                   Long departmentId, LocalDate scheduleDate, String timeSlot,
+                                                   Boolean bookableOnly) {
         Page<DoctorScheduleEntity> page = new Page<>(pageNo != null ? pageNo : 1, pageSize != null ? pageSize : 10);
         QueryWrapper<DoctorScheduleEntity> wrapper = new QueryWrapper<>();
-        if (doctorId != null) wrapper.eq("doctor_id", doctorId);
-        if (departmentId != null) wrapper.eq("department_id", departmentId);
-        if (scheduleDate != null) wrapper.eq("schedule_date", scheduleDate);
-        if (StringUtils.hasText(timeSlot)) wrapper.eq("time_slot", timeSlot);
-        wrapper.orderByDesc("schedule_date");
+        wrapper.eq("deleted", false);
+        if (doctorId != null) {
+            wrapper.eq("doctor_id", doctorId);
+        }
+        if (departmentId != null) {
+            wrapper.eq("department_id", departmentId);
+        }
+        if (scheduleDate != null) {
+            wrapper.eq("schedule_date", scheduleDate);
+        }
+        if (StringUtils.hasText(timeSlot)) {
+            wrapper.eq("time_slot", timeSlot);
+        }
+        if (Boolean.TRUE.equals(bookableOnly)) {
+            LocalDate today = LocalDate.now();
+            LocalDate lastBookableDate = today.plusDays(scheduleProperties.getAdvanceDays() - 1L);
+            wrapper.eq("status", "ENABLED");
+            wrapper.ge("schedule_date", today);
+            wrapper.le("schedule_date", lastBookableDate);
+            wrapper.gt("available_count", 0);
+        }
+        wrapper.orderByAsc("schedule_date").orderByAsc("time_slot");
 
         doctorScheduleMapper.selectPage(page, wrapper);
 
@@ -143,11 +179,21 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         return resultPage;
     }
 
+    @Override
+    public boolean isBookableScheduleDate(LocalDate scheduleDate) {
+        if (scheduleDate == null) {
+            return false;
+        }
+        LocalDate today = LocalDate.now();
+        LocalDate lastBookableDate = today.plusDays(scheduleProperties.getAdvanceDays() - 1L);
+        return !scheduleDate.isBefore(today) && !scheduleDate.isAfter(lastBookableDate);
+    }
+
     private DoctorScheduleVO fetchVO(DoctorScheduleEntity entity) {
         DoctorEntity doctor = doctorMapper.selectById(entity.getDoctorId());
         DepartmentEntity dept = departmentMapper.selectById(entity.getDepartmentId());
-        return convertToVO(entity, 
-                doctor != null ? doctor.getName() : "", 
+        return convertToVO(entity,
+                doctor != null ? doctor.getName() : "",
                 dept != null ? dept.getDeptName() : "");
     }
 

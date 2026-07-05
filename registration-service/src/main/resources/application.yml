@@ -69,3 +69,10 @@ knife4j:
   enable: true
   setting:
     language: zh_cn
+
+app:
+  registration:
+    # 患者可预约窗口：含当天共 7 个自然日（今天 + 未来 6 天）
+    advance-days: 7
+    auto-generate-enabled: false
+    auto-generate-cron: "0 0 23 * * SUN"
