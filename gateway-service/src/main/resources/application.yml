@@ -70,22 +70,27 @@ spring:
             - Path=/api/registrations/**,/api/queue/**
 
         - id: backend-outpatient-domain
-          uri: lb://backend-service
+          uri: ${OUTPATIENT_SERVICE_URI:lb://outpatient-service}
           predicates:
             - Path=/api/outpatient/**
 
         - id: backend-inspection-domain
+          uri: ${INSPECTION_SERVICE_URI:lb://inspection-service}
+          predicates:
+            - Path=/api/check-requests/**,/api/check-results/**,/api/inspection-requests/**,/api/inspection-results/**,/api/disposal-requests/**
+
+        - id: backend-ct-domain
           uri: lb://backend-service
           predicates:
-            - Path=/api/check-requests/**,/api/check-results/**,/api/inspection-requests/**,/api/inspection-results/**,/api/disposal-requests/**,/api/ct-analysis/**
+            - Path=/api/ct-analysis/**
 
         - id: backend-pharmacy-domain
-          uri: lb://backend-service
+          uri: ${PHARMACY_SERVICE_URI:lb://pharmacy-service}
           predicates:
             - Path=/api/drugs/**,/api/prescriptions/**,/api/pharmacy/**
 
         - id: backend-payment-domain
-          uri: lb://backend-service
+          uri: ${PAYMENT_SERVICE_URI:lb://backend-service}
           predicates:
             - Path=/api/payment/**
 
