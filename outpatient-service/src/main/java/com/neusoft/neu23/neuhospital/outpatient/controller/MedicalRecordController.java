@@ -1,0 +1,83 @@
+package com.neusoft.neu23.neuhospital.outpatient.controller;
+
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.neusoft.neu23.neuhospital.common.response.PageResult;
+import com.neusoft.neu23.neuhospital.common.response.Result;
+import com.neusoft.neu23.neuhospital.auth.security.SecurityUtils;
+import com.neusoft.neu23.neuhospital.outpatient.dto.MedicalDiagnosisReq;
+import com.neusoft.neu23.neuhospital.outpatient.dto.MedicalRecordCreateReq;
+import com.neusoft.neu23.neuhospital.outpatient.dto.MedicalRecordUpdateReq;
+import com.neusoft.neu23.neuhospital.outpatient.service.MedicalRecordService;
+import com.neusoft.neu23.neuhospital.outpatient.vo.MedicalDiagnosisVO;
+import com.neusoft.neu23.neuhospital.outpatient.vo.MedicalRecordVO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/outpatient/records")
+public class MedicalRecordController {
+
+    @Autowired
+    private MedicalRecordService medicalRecordService;
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
+    public Result<Long> createRecord(@RequestBody MedicalRecordCreateReq req) {
+        Long id = medicalRecordService.createRecord(req);
+        return Result.success(id);
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT') or @accessEvaluator.canAccessMedicalRecord(#id, authentication)")
+    public Result<MedicalRecordVO> getRecordDetail(@PathVariable Long id) {
+        MedicalRecordVO vo = medicalRecordService.getRecordDetail(id);
+        return Result.success(vo);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
+    public Result<Void> updateRecord(@PathVariable Long id, @RequestBody MedicalRecordUpdateReq req) {
+        medicalRecordService.updateRecord(id, req);
+        return Result.success(null);
+    }
+
+    @PostMapping("/{id}/confirm")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
+    public Result<Void> confirmRecord(@PathVariable Long id) {
+        medicalRecordService.confirmRecord(id);
+        return Result.success(null);
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT','PATIENT')")
+    public Result<PageResult<MedicalRecordVO>> getRecordsPage(
+            @RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
+            @RequestParam(value = "patientId", required = false) Long patientId,
+            @RequestParam(value = "doctorId", required = false) Long doctorId) {
+        Long resolvedPatientId = patientId;
+        if ("PATIENT".equals(SecurityUtils.getCurrentUserType())) {
+            resolvedPatientId = SecurityUtils.getCurrentBizId();
+            doctorId = null;
+        }
+        Page<MedicalRecordVO> page = medicalRecordService.getRecordsPage(pageNo, pageSize, resolvedPatientId, doctorId);
+        return Result.success(new PageResult<>(page.getRecords(), page.getCurrent(), page.getSize(), page.getTotal()));
+    }
+
+    @PostMapping("/{id}/diagnoses")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT')")
+    public Result<Void> saveDiagnoses(@PathVariable Long id, @RequestBody List<MedicalDiagnosisReq> diagnoses) {
+        medicalRecordService.saveDiagnoses(id, diagnoses);
+        return Result.success(null);
+    }
+
+    @GetMapping("/{id}/diagnoses")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','MANAGEMENT') or @accessEvaluator.canAccessMedicalRecord(#id, authentication)")
+    public Result<List<MedicalDiagnosisVO>> getDiagnoses(@PathVariable Long id) {
+        List<MedicalDiagnosisVO> diagnoses = medicalRecordService.getDiagnosesByRecordId(id);
+        return Result.success(diagnoses);
+    }
+}

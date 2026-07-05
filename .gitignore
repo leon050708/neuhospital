@@ -35,5 +35,6 @@ build/
 ### Custom Ignored ###
 .tmp/
 .codegraph/
+logs/
 *.docx
 *.pdf

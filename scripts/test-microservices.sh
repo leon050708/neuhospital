@@ -53,7 +53,7 @@ curl -fsS "${GATEWAY_URL}/api/patients/${biz_id}" \
 echo
 
 echo "== 7. Upload a small file through gateway -> file-service =="
-tmp_file="$(mktemp /tmp/neuhospital-file-test.XXXXXX.txt)"
+tmp_file="$(mktemp "${TMPDIR:-/tmp}/neuhospital-file-test.XXXXXX")"
 printf 'microservice gateway file upload test %s\n' "${suffix}" > "${tmp_file}"
 upload_response="$(curl -fsS -X POST "${GATEWAY_URL}/api/files/upload" \
   -H "Authorization: Bearer ${access_token}" \

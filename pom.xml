@@ -19,5 +19,9 @@
         <module>patient-service</module>
         <module>doctor-service</module>
         <module>registration-service</module>
+        <module>payment-service</module>
+        <module>pharmacy-service</module>
+        <module>inspection-service</module>
+        <module>outpatient-service</module>
     </modules>
 </project>
