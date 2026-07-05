@@ -9,7 +9,13 @@ import java.time.LocalDate;
 
 public interface DoctorScheduleService {
     DoctorScheduleVO createSchedule(DoctorScheduleCreateReq req);
+
     DoctorScheduleVO updateSchedule(Long id, DoctorScheduleUpdateReq req);
+
     void closeSchedule(Long id);
-    Page<DoctorScheduleVO> getSchedulesPage(Integer pageNo, Integer pageSize, Long doctorId, Long departmentId, LocalDate scheduleDate, String timeSlot);
+
+    Page<DoctorScheduleVO> getSchedulesPage(Integer pageNo, Integer pageSize, Long doctorId, Long departmentId,
+                                            LocalDate scheduleDate, String timeSlot, Boolean bookableOnly);
+
+    boolean isBookableScheduleDate(LocalDate scheduleDate);
 }

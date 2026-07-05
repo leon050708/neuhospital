@@ -24,6 +24,7 @@ import com.neusoft.neu23.neuhospital.registration.mapper.DoctorScheduleMapper;
 import com.neusoft.neu23.neuhospital.registration.mapper.RegistrationMapper;
 import com.neusoft.neu23.neuhospital.registration.mapper.RegistrationMessageLogMapper;
 import com.neusoft.neu23.neuhospital.registration.mapper.VisitQueueMapper;
+import com.neusoft.neu23.neuhospital.registration.service.DoctorScheduleService;
 import com.neusoft.neu23.neuhospital.registration.service.RegistrationService;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -86,6 +87,9 @@ public class RegistrationServiceImpl implements RegistrationService {
 
     @Autowired
     private DoctorMapper doctorMapper;
+
+    @Autowired
+    private DoctorScheduleService doctorScheduleService;
 
     private DefaultRedisScript<Long> rateLimitScript;
 
@@ -193,6 +197,9 @@ public class RegistrationServiceImpl implements RegistrationService {
         }
         if (!"ENABLED".equals(schedule.getStatus())) {
             throw new BusinessException(400, "当前排班暂不可预约");
+        }
+        if (!doctorScheduleService.isBookableScheduleDate(schedule.getScheduleDate())) {
+            throw new BusinessException(400, "该排班不在可预约时间窗口内");
         }
         Integer availableCount = schedule.getAvailableCount();
         if (availableCount == null || availableCount <= 0) {

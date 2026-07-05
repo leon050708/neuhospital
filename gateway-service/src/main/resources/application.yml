@@ -62,7 +62,7 @@ spring:
         - id: backend-schedule-domain
           uri: ${REGISTRATION_SERVICE_URI:lb://registration-service}
           predicates:
-            - Path=/api/schedules/**
+            - Path=/api/schedules/**,/api/schedule-templates/**
 
         - id: backend-registration-domain
           uri: ${REGISTRATION_SERVICE_URI:lb://registration-service}
