@@ -194,7 +194,7 @@ public class RegistrationServiceImpl implements RegistrationService {
 
         // 这是消费者要执行的真实落盘逻辑
         DoctorScheduleEntity schedule = doctorScheduleMapper.selectById(scheduleId);
-        if (schedule == null || schedule.getAvailableCount() <= 0) {
+        if (!isSchedulableForRegistration(schedule)) {
             markMessageFailed(messageLog, scheduleId);
             return;
         }
@@ -272,6 +272,20 @@ public class RegistrationServiceImpl implements RegistrationService {
                 .eq(RegistrationMessageLogEntity::getPatientId, patientId)
                 .in(RegistrationMessageLogEntity::getStatus, 0, 1);
         return messageLogMapper.selectCount(wrapper) > 0;
+    }
+
+    private boolean isSchedulableForRegistration(DoctorScheduleEntity schedule) {
+        if (schedule == null || schedule.getScheduleDate() == null) {
+            return false;
+        }
+        if (schedule.getAvailableCount() == null || schedule.getAvailableCount() <= 0) {
+            return false;
+        }
+        if (schedule.getScheduleDate().isBefore(LocalDate.now())) {
+            return false;
+        }
+        return "ENABLED".equalsIgnoreCase(schedule.getStatus())
+                || "AVAILABLE".equalsIgnoreCase(schedule.getStatus());
     }
 
     @Override
@@ -466,3 +480,4 @@ public class RegistrationServiceImpl implements RegistrationService {
         visitQueueMapper.insert(vq);
     }
 }
+
