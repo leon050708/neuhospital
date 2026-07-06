@@ -24,6 +24,11 @@ spring:
     username: ${DB_USERNAME:leon}
     password: ${DB_PASSWORD:YcjQe%dFF2*Ds3z7mysH4w}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 1
+      data-source-properties:
+        ApplicationName: ${spring.application.name}
 
   data:
     redis:
@@ -46,7 +51,7 @@ spring:
 
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY:dummy-key}
+      api-key: ${OPENAI_API_KEY:sk-ws-H.REIXPPP.UJff.MEUCIFiRyf8HBIPEAt2LZ6zAol3u20m7fPX4tLsQGdel-4jFAiEA14MtlRMBE5zRX6B3m4MTii2h9gFFW6R4NhKnnETZtyg}
       base-url: ${OPENAI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}
       chat:
         options:
@@ -117,4 +122,3 @@ knife4j:
   enable: true
   setting:
     language: zh_cn
-
