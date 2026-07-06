@@ -1,6 +1,8 @@
 -- 兼容两种场景：
 -- 1. 全新库初始化
 -- 2. 旧版 knowledge_document / knowledge_chunk 已存在时补齐缺失字段
+-- 启用 pgvector，用于数据库侧向量距离计算和 TopK 排序
+CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS knowledge_document (
     id BIGSERIAL PRIMARY KEY,
@@ -162,3 +164,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_knowledge_chunk_doc_no
 
 CREATE INDEX IF NOT EXISTS idx_knowledge_chunk_filter
     ON knowledge_chunk (document_status, knowledge_type, department_id);
+
+-- 如后续统一 embedding 维度，可按模型/版本增加部分表达式索引，例如：
+-- CREATE INDEX IF NOT EXISTS idx_knowledge_chunk_embedding_cosine_v1
+--     ON knowledge_chunk USING ivfflat ((CAST(embedding AS vector(1024))) vector_cosine_ops)
+--     WITH (lists = 100)
+--     WHERE embedding_model = 'text-embedding-v3' AND embedding_version = 1 AND deleted = false AND document_status = 'PUBLISHED';

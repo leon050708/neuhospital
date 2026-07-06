@@ -25,7 +25,7 @@ class AiChatClientConfigTest {
 
         when(rootBuilder.clone()).thenReturn(agentBuilder, analysisBuilder);
         when(agentBuilder.defaultOptions(any())).thenReturn(agentBuilder);
-        when(agentBuilder.defaultFunctions("getPatientInfo", "updatePatientMemory", "queryDepartment", "querySchedule", "bookRegistration"))
+        when(agentBuilder.defaultFunctions("getPatientInfo", "queryDepartment", "querySchedule"))
                 .thenReturn(agentBuilder);
         when(agentBuilder.build()).thenReturn(agentClient);
         when(analysisBuilder.defaultOptions(any())).thenReturn(analysisBuilder);
@@ -51,6 +51,8 @@ class AiChatClientConfigTest {
         verify(analysisBuilder).defaultOptions(analysisOptionsCaptor.capture());
         assertEquals("qwen-turbo", analysisOptionsCaptor.getValue().getModel());
 
+        verify(agentBuilder).defaultFunctions("getPatientInfo", "queryDepartment", "querySchedule");
+        verify(analysisBuilder, never()).defaultFunctions("getPatientInfo", "queryDepartment", "querySchedule");
         verify(analysisBuilder, never()).defaultFunctions("getPatientInfo", "updatePatientMemory", "queryDepartment", "querySchedule", "bookRegistration");
     }
 }

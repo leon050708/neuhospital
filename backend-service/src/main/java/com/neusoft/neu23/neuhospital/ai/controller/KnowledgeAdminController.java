@@ -53,4 +53,9 @@ public class KnowledgeAdminController {
         knowledgeAdminService.offlineDocument(documentId, SecurityUtils.getCurrentUserId());
         return Result.success();
     }
+
+    @PostMapping("/{documentId}/reindex")
+    public Result<Integer> reindexDocument(@PathVariable("documentId") Long documentId) {
+        return Result.success(knowledgeAdminService.reindexDocument(documentId, SecurityUtils.getCurrentUserId()));
+    }
 }

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -161,6 +162,12 @@ public class ChatAgentService {
         }
 
         messages.add(new SystemMessage(ragContext.evidenceSystemMessage()));
+        messages.add(new SystemMessage("""
+                [工具安全约束]
+                1. 你只能调用查询类工具，不能直接执行会改变业务状态的操作。
+                2. 涉及挂号、建档修改、长期记忆写入时，只能告诉用户需要人工确认或走显式业务接口。
+                3. 不要把“我建议下一步操作”伪装成“我已经替你执行成功”。
+                """));
 
         for (AiChatMessageEntity msg : unsummarizedHistory) {
             if ("USER".equals(msg.getMessageRole())) {
@@ -188,9 +195,37 @@ public class ChatAgentService {
         }
     }
 
-    private void triggerAsyncSummarization(AiChatSessionEntity session, List<AiChatMessageEntity> unsummarizedHistory, AiChatMessageEntity lastAssistantMsg) {
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
+    void completeSummaryUpdate(Long sessionId, int targetSequence, String newSummary) {
+        AiChatSessionEntity latestSession = sessionService.getById(sessionId);
+        if (latestSession == null) {
+            return;
+        }
+
+        int currentSeq = latestSession.getLastSummarizedSeq() == null ? 0 : latestSession.getLastSummarizedSeq();
+        if (targetSequence <= currentSeq) {
+            return;
+        }
+
+        AiChatSessionEntity update = new AiChatSessionEntity();
+        update.setId(sessionId);
+        update.setSummary(newSummary);
+        update.setLastSummarizedSeq(targetSequence);
+        update.setUpdatedAt(LocalDateTime.now());
+        sessionService.updateById(update);
+    }
+
+    private void triggerAsyncSummarization(AiChatSessionEntity session,
+                                           List<AiChatMessageEntity> unsummarizedHistory,
+                                           AiChatMessageEntity lastAssistantMsg) {
+        CompletableFuture.runAsync(() -> {
+            RLock summaryLock = redissonClient.getLock("medical:ai:summary:lock:" + session.getId());
+            boolean locked = false;
             try {
+                locked = summaryLock.tryLock(1, 30, TimeUnit.SECONDS);
+                if (!locked) {
+                    return;
+                }
+
                 StringBuilder sb = new StringBuilder();
                 if (session.getSummary() != null && !session.getSummary().isEmpty()) {
                     sb.append("这是之前提炼的历史问诊摘要：\n").append(session.getSummary()).append("\n\n");
@@ -207,11 +242,15 @@ public class ChatAgentService {
                         .call()
                         .content();
 
-                session.setSummary(newSummary);
-                session.setLastSummarizedSeq(lastAssistantMsg.getSequenceNo());
-                sessionService.updateById(session);
+                completeSummaryUpdate(session.getId(), lastAssistantMsg.getSequenceNo(), newSummary);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             } catch (Exception e) {
                 e.printStackTrace();
+            } finally {
+                if (locked && summaryLock.isHeldByCurrentThread()) {
+                    summaryLock.unlock();
+                }
             }
         });
     }
