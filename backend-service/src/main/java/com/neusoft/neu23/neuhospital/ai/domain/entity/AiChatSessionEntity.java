@@ -24,6 +24,7 @@ public class AiChatSessionEntity {
     private Long createdBy;
     private Long updatedBy;
     private Boolean deleted;
+    private Integer lastSummarizedSeq;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -53,4 +54,6 @@ public class AiChatSessionEntity {
     public void setUpdatedBy(Long updatedBy) { this.updatedBy = updatedBy; }
     public Boolean getDeleted() { return deleted; }
     public void setDeleted(Boolean deleted) { this.deleted = deleted; }
+    public Integer getLastSummarizedSeq() { return lastSummarizedSeq; }
+    public void setLastSummarizedSeq(Integer lastSummarizedSeq) { this.lastSummarizedSeq = lastSummarizedSeq; }
 }

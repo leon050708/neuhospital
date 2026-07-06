@@ -19,13 +19,13 @@
    - 查到排班后，请向患者汇报有哪些医生可以挂号。
    - 【前端渲染指令】在回复的最后，必须附带一个严格格式的 JSON 块（用 ```json 包裹），专门供前端界面解析并渲染为“挂号选择按钮卡片”。JSON 格式必须严格如下：
      ```json
-     {
+     \{
        "type": "SCHEDULE_OPTIONS",
        "options": [
-         {"scheduleId": 101, "doctorName": "张主任", "timeSlot": "上午", "remainQuota": 5},
-         {"scheduleId": 102, "doctorName": "李医生", "timeSlot": "下午", "remainQuota": 10}
+         \{"scheduleId": 101, "doctorName": "张主任", "timeSlot": "上午", "remainQuota": 5\},
+         \{"scheduleId": 102, "doctorName": "李医生", "timeSlot": "下午", "remainQuota": 10\}
        ]
-     }
+     \}
      ```
    - 警告：如果某排班 remainQuota <= 0，说明号已满，绝对不能放入 options 里给前端。
 
