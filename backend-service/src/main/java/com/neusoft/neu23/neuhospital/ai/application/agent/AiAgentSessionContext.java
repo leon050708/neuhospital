@@ -19,12 +19,22 @@ public final class AiAgentSessionContext {
         return scope.patientId();
     }
 
+    public static Long getPatientId() {
+        SessionScope scope = CONTEXT.get();
+        return scope == null ? null : scope.patientId();
+    }
+
     public static Long requireSessionId() {
         SessionScope scope = requireScope();
         if (scope.sessionId() == null) {
             throw new IllegalStateException("当前AI会话缺少会话上下文");
         }
         return scope.sessionId();
+    }
+
+    public static Long getSessionId() {
+        SessionScope scope = CONTEXT.get();
+        return scope == null ? null : scope.sessionId();
     }
 
     public static Long getRegistrationId() {
