@@ -52,11 +52,15 @@ public class KnowledgeAdminService {
 
         KnowledgeDocumentEntity entity = new KnowledgeDocumentEntity();
         entity.setDocNo("KNOW" + UUID.randomUUID().toString().replace("-", ""));
+        entity.setLegacyDocumentNo(entity.getDocNo());
         entity.setTitle(command.title().trim());
         entity.setFileRecordId(fileRecord.getId());
+        entity.setLegacyFileId(fileRecord.getId());
         entity.setKnowledgeType(command.knowledgeType().trim());
+        entity.setLegacyCategory(command.knowledgeType().trim());
         entity.setDepartmentId(command.departmentId());
         entity.setTags(command.tags());
+        entity.setLegacySourceType("UPLOAD");
         entity.setAudience("PATIENT");
         entity.setVisitScope("BOTH");
         entity.setVersionNo(1);
@@ -69,6 +73,8 @@ public class KnowledgeAdminService {
         entity.setUpdatedAt(LocalDateTime.now());
         entity.setCreatedBy(operatorId);
         entity.setUpdatedBy(operatorId);
+        entity.setLegacyUploadedBy(operatorId);
+        entity.setLegacyUploadedAt(LocalDateTime.now());
         entity.setDeleted(false);
         documentService.save(entity);
 

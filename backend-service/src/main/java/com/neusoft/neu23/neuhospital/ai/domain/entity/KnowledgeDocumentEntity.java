@@ -1,6 +1,7 @@
 package com.neusoft.neu23.neuhospital.ai.domain.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
@@ -12,11 +13,19 @@ public class KnowledgeDocumentEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String docNo;
+    @TableField("document_no")
+    private String legacyDocumentNo;
     private String title;
     private Long fileRecordId;
+    @TableField("file_id")
+    private Long legacyFileId;
     private String knowledgeType;
+    @TableField("category")
+    private String legacyCategory;
     private Long departmentId;
     private String tags;
+    @TableField("source_type")
+    private String legacySourceType;
     private String audience;
     private String visitScope;
     private String summary;
@@ -34,22 +43,34 @@ public class KnowledgeDocumentEntity {
     private LocalDateTime updatedAt;
     private Long createdBy;
     private Long updatedBy;
+    @TableField("uploaded_by")
+    private Long legacyUploadedBy;
+    @TableField("uploaded_at")
+    private LocalDateTime legacyUploadedAt;
     private Boolean deleted;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getDocNo() { return docNo; }
     public void setDocNo(String docNo) { this.docNo = docNo; }
+    public String getLegacyDocumentNo() { return legacyDocumentNo; }
+    public void setLegacyDocumentNo(String legacyDocumentNo) { this.legacyDocumentNo = legacyDocumentNo; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public Long getFileRecordId() { return fileRecordId; }
     public void setFileRecordId(Long fileRecordId) { this.fileRecordId = fileRecordId; }
+    public Long getLegacyFileId() { return legacyFileId; }
+    public void setLegacyFileId(Long legacyFileId) { this.legacyFileId = legacyFileId; }
     public String getKnowledgeType() { return knowledgeType; }
     public void setKnowledgeType(String knowledgeType) { this.knowledgeType = knowledgeType; }
+    public String getLegacyCategory() { return legacyCategory; }
+    public void setLegacyCategory(String legacyCategory) { this.legacyCategory = legacyCategory; }
     public Long getDepartmentId() { return departmentId; }
     public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
     public String getTags() { return tags; }
     public void setTags(String tags) { this.tags = tags; }
+    public String getLegacySourceType() { return legacySourceType; }
+    public void setLegacySourceType(String legacySourceType) { this.legacySourceType = legacySourceType; }
     public String getAudience() { return audience; }
     public void setAudience(String audience) { this.audience = audience; }
     public String getVisitScope() { return visitScope; }
@@ -84,6 +105,10 @@ public class KnowledgeDocumentEntity {
     public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }
     public Long getUpdatedBy() { return updatedBy; }
     public void setUpdatedBy(Long updatedBy) { this.updatedBy = updatedBy; }
+    public Long getLegacyUploadedBy() { return legacyUploadedBy; }
+    public void setLegacyUploadedBy(Long legacyUploadedBy) { this.legacyUploadedBy = legacyUploadedBy; }
+    public LocalDateTime getLegacyUploadedAt() { return legacyUploadedAt; }
+    public void setLegacyUploadedAt(LocalDateTime legacyUploadedAt) { this.legacyUploadedAt = legacyUploadedAt; }
     public Boolean getDeleted() { return deleted; }
     public void setDeleted(Boolean deleted) { this.deleted = deleted; }
 }

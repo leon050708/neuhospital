@@ -73,6 +73,7 @@ public class KnowledgeDocumentIngestService {
                 entity.setDocumentId(document.getId());
                 entity.setChunkNo(i + 1);
                 entity.setContentText(chunkText);
+                entity.setLegacyChunkText(chunkText);
                 entity.setCharCount(chunkText.length());
                 entity.setTokenCount(chunkText.length());
                 entity.setKnowledgeType(document.getKnowledgeType());

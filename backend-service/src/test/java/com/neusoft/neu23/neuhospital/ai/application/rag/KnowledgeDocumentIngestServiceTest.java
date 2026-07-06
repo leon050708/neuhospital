@@ -83,6 +83,7 @@ class KnowledgeDocumentIngestServiceTest {
         verify(chunkService).saveBatch(chunkCaptor.capture());
         assertEquals(2, chunkCaptor.getValue().size());
         assertEquals("chunk one", chunkCaptor.getValue().get(0).getContentText());
+        assertEquals("chunk one", chunkCaptor.getValue().get(0).getLegacyChunkText());
         assertEquals("text-embedding-v3", chunkCaptor.getValue().get(0).getEmbeddingModel());
         assertTrue(chunkCaptor.getValue().get(0).getEmbeddingText().contains("1.0"));
 

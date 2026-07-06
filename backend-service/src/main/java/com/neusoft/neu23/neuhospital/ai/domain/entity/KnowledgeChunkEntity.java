@@ -17,6 +17,8 @@ public class KnowledgeChunkEntity {
     private String sectionPath;
     private String sectionTitle;
     private String contentText;
+    @TableField("chunk_text")
+    private String legacyChunkText;
     private String contentHash;
     private Integer charCount;
     private Integer tokenCount;
@@ -46,6 +48,8 @@ public class KnowledgeChunkEntity {
     public void setSectionTitle(String sectionTitle) { this.sectionTitle = sectionTitle; }
     public String getContentText() { return contentText; }
     public void setContentText(String contentText) { this.contentText = contentText; }
+    public String getLegacyChunkText() { return legacyChunkText; }
+    public void setLegacyChunkText(String legacyChunkText) { this.legacyChunkText = legacyChunkText; }
     public String getContentHash() { return contentHash; }
     public void setContentHash(String contentHash) { this.contentHash = contentHash; }
     public Integer getCharCount() { return charCount; }
