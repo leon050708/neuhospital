@@ -238,12 +238,14 @@ POST /api/ai/chat/sessions/{sessionNo}/messages
   "options": [
     {
       "scheduleId": 101,
+      "scheduleDate": "2026-07-08",
       "doctorName": "张主任",
       "timeSlot": "上午",
       "remainQuota": 5
     },
     {
       "scheduleId": 102,
+      "scheduleDate": "2026-07-08",
       "doctorName": "李医生",
       "timeSlot": "下午",
       "remainQuota": 10
@@ -266,10 +268,18 @@ POST /api/ai/chat/sessions/{sessionNo}/messages
 
 建议渲染字段：
 
+- 日期 `scheduleDate`
 - 医生姓名 `doctorName`
 - 时段 `timeSlot`
 - 剩余号源 `remainQuota`
 - 隐式主键 `scheduleId`
+
+推荐交互：
+
+- 先从 `options` 中按 `scheduleDate` 去重，渲染日期选择。
+- 用户选中某个日期后，只展示该日期下的排班。
+- 在日期内再按 `timeSlot` 提供上午/下午/晚上筛选。
+- 卡片点击时仍使用 `scheduleId` 作为唯一提交值。
 
 点击卡片后的推荐行为：
 
