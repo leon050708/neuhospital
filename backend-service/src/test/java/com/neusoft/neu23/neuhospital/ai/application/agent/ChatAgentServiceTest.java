@@ -94,7 +94,10 @@ class ChatAgentServiceTest {
 
         ChatAgentService service = new ChatAgentService(agentChatClient, analysisChatClient, sessionService, messageService, registrationService, redissonClient, ragOrchestrator);
         ReflectionTestUtils.setField(service, "systemPromptResource",
-                new ByteArrayResource("你是患者助诊助手，患者ID=<patientId>。".getBytes(StandardCharsets.UTF_8)));
+                new ByteArrayResource(("你是患者助诊助手，患者ID={patientId}。" +
+                        "当前医院时区：{hospitalTimeZone}。" +
+                        "当前北京时间日期：{currentDate}。" +
+                        "当前北京时间：{currentDateTime}。").getBytes(StandardCharsets.UTF_8)));
 
         AiChatSessionEntity session = new AiChatSessionEntity();
         session.setPatientId(35L);
@@ -111,6 +114,8 @@ class ChatAgentServiceTest {
         );
 
         assertNotNull(messages);
+        assertTrue(messages.stream().anyMatch(message -> message.getText().contains("Asia/Shanghai")));
+        assertTrue(messages.stream().anyMatch(message -> message.getText().contains("当前北京时间日期")));
         assertTrue(messages.stream().anyMatch(message -> message.getText().contains("只能调用查询类工具")));
         assertTrue(messages.stream().anyMatch(message -> message.getText().contains("不要把“我建议下一步操作”伪装成“我已经替你执行成功”")));
     }
@@ -163,3 +168,4 @@ class ChatAgentServiceTest {
         ));
     }
 }
+
