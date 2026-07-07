@@ -19,6 +19,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class DoctorScheduleServiceImpl implements DoctorScheduleService {
+
+    private static final ZoneId HOSPITAL_ZONE = ZoneId.of("Asia/Shanghai");
 
     private final DoctorScheduleMapper doctorScheduleMapper;
     private final DoctorMapper doctorMapper;
@@ -121,17 +124,28 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
     public Page<DoctorScheduleVO> getSchedulesPage(Integer pageNo, Integer pageSize, Long doctorId, Long departmentId, LocalDate scheduleDate, String timeSlot) {
         Page<DoctorScheduleEntity> page = new Page<>(pageNo != null ? pageNo : 1, pageSize != null ? pageSize : 10);
         QueryWrapper<DoctorScheduleEntity> wrapper = new QueryWrapper<>();
+        LocalDate today = LocalDate.now(HOSPITAL_ZONE);
         if (doctorId != null) wrapper.eq("doctor_id", doctorId);
         if (departmentId != null) wrapper.eq("department_id", departmentId);
-        if (scheduleDate != null) wrapper.eq("schedule_date", scheduleDate);
+        if (scheduleDate != null) {
+            wrapper.eq("schedule_date", scheduleDate);
+        } else {
+            wrapper.ge("schedule_date", today);
+        }
         if (StringUtils.hasText(timeSlot)) wrapper.eq("time_slot", timeSlot);
-        wrapper.orderByDesc("schedule_date");
+        wrapper.gt("available_count", 0);
+        wrapper.and(w -> w.eq("status", "ENABLED").or().eq("status", "AVAILABLE"));
+        wrapper.orderByAsc("schedule_date").orderByAsc("time_slot");
 
         doctorScheduleMapper.selectPage(page, wrapper);
 
-        Map<Long, DoctorEntity> doctorsById = loadDoctors(page.getRecords());
-        Map<Long, DepartmentEntity> departmentsById = loadDepartments(page.getRecords());
-        List<DoctorScheduleVO> voList = page.getRecords().stream()
+        List<DoctorScheduleEntity> visibleSchedules = page.getRecords().stream()
+                .filter(record -> isPatientSchedulable(record, today, scheduleDate))
+                .collect(Collectors.toList());
+
+        Map<Long, DoctorEntity> doctorsById = loadDoctors(visibleSchedules);
+        Map<Long, DepartmentEntity> departmentsById = loadDepartments(visibleSchedules);
+        List<DoctorScheduleVO> voList = visibleSchedules.stream()
                 .map(record -> convertToVO(
                         record,
                         doctorsById.get(record.getDoctorId()) != null ? doctorsById.get(record.getDoctorId()).getName() : "",
@@ -143,11 +157,31 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         return resultPage;
     }
 
+    private boolean isPatientSchedulable(DoctorScheduleEntity schedule, LocalDate today, LocalDate exactDate) {
+        if (schedule == null || schedule.getScheduleDate() == null) {
+            return false;
+        }
+        if (schedule.getAvailableCount() == null || schedule.getAvailableCount() <= 0) {
+            return false;
+        }
+        if (!isAvailableStatus(schedule.getStatus())) {
+            return false;
+        }
+        if (exactDate != null) {
+            return exactDate.equals(schedule.getScheduleDate());
+        }
+        return !schedule.getScheduleDate().isBefore(today);
+    }
+
+    private boolean isAvailableStatus(String status) {
+        return "ENABLED".equalsIgnoreCase(status) || "AVAILABLE".equalsIgnoreCase(status);
+    }
+
     private DoctorScheduleVO fetchVO(DoctorScheduleEntity entity) {
         DoctorEntity doctor = doctorMapper.selectById(entity.getDoctorId());
         DepartmentEntity dept = departmentMapper.selectById(entity.getDepartmentId());
-        return convertToVO(entity, 
-                doctor != null ? doctor.getName() : "", 
+        return convertToVO(entity,
+                doctor != null ? doctor.getName() : "",
                 dept != null ? dept.getDeptName() : "");
     }
 
@@ -192,3 +226,6 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         return vo;
     }
 }
+
+
+

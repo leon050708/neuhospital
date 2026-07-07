@@ -40,6 +40,7 @@ import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -52,6 +53,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public class RegistrationServiceImpl implements RegistrationService {
 
     private static final Logger log = LoggerFactory.getLogger(RegistrationServiceImpl.class);
+    private static final ZoneId HOSPITAL_ZONE = ZoneId.of("Asia/Shanghai");
 
     @Autowired
     private RedissonClient redissonClient;
@@ -194,7 +196,7 @@ public class RegistrationServiceImpl implements RegistrationService {
 
         // 这是消费者要执行的真实落盘逻辑
         DoctorScheduleEntity schedule = doctorScheduleMapper.selectById(scheduleId);
-        if (schedule == null || schedule.getAvailableCount() <= 0) {
+        if (!isSchedulableForRegistration(schedule)) {
             markMessageFailed(messageLog, scheduleId);
             return;
         }
@@ -272,6 +274,20 @@ public class RegistrationServiceImpl implements RegistrationService {
                 .eq(RegistrationMessageLogEntity::getPatientId, patientId)
                 .in(RegistrationMessageLogEntity::getStatus, 0, 1);
         return messageLogMapper.selectCount(wrapper) > 0;
+    }
+
+    private boolean isSchedulableForRegistration(DoctorScheduleEntity schedule) {
+        if (schedule == null || schedule.getScheduleDate() == null) {
+            return false;
+        }
+        if (schedule.getAvailableCount() == null || schedule.getAvailableCount() <= 0) {
+            return false;
+        }
+        if (schedule.getScheduleDate().isBefore(LocalDate.now(HOSPITAL_ZONE))) {
+            return false;
+        }
+        return "ENABLED".equalsIgnoreCase(schedule.getStatus())
+                || "AVAILABLE".equalsIgnoreCase(schedule.getStatus());
     }
 
     @Override
@@ -437,7 +453,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         if (!"PAID".equals(reg.getStatus())) {
             throw new RuntimeException("挂号单未缴费或已报到");
         }
-        if (reg.getVisitDate() == null || !reg.getVisitDate().equals(LocalDate.now())) {
+        if (reg.getVisitDate() == null || !reg.getVisitDate().equals(LocalDate.now(HOSPITAL_ZONE))) {
             throw new RuntimeException("只能在就诊当日签到");
         }
 
@@ -466,3 +482,6 @@ public class RegistrationServiceImpl implements RegistrationService {
         visitQueueMapper.insert(vq);
     }
 }
+
+
+

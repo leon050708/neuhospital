@@ -14,7 +14,7 @@ public class AiChatClientConfig {
                 .defaultOptions(OpenAiChatOptions.builder()
                         .model(properties.getAgentModel())
                         .build())
-                .defaultFunctions("getPatientInfo", "updatePatientMemory", "queryDepartment", "querySchedule", "bookRegistration")
+                .defaultFunctions("getPatientInfo", "queryDepartment", "querySchedule")
                 .build();
     }
 

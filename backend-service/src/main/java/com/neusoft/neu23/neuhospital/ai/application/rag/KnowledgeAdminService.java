@@ -1,6 +1,9 @@
 package com.neusoft.neu23.neuhospital.ai.application.rag;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.neusoft.neu23.neuhospital.ai.domain.entity.KnowledgeChunkEntity;
 import com.neusoft.neu23.neuhospital.ai.domain.entity.KnowledgeDocumentEntity;
+import com.neusoft.neu23.neuhospital.ai.infrastructure.service.KnowledgeChunkService;
 import com.neusoft.neu23.neuhospital.ai.infrastructure.service.KnowledgeDocumentService;
 import com.neusoft.neu23.neuhospital.common.exception.BusinessException;
 import com.neusoft.neu23.neuhospital.ct.config.MinioProperties;
@@ -18,15 +21,18 @@ public class KnowledgeAdminService {
 
     private final FileService fileService;
     private final KnowledgeDocumentService documentService;
+    private final KnowledgeChunkService chunkService;
     private final KnowledgeDocumentIngestService ingestService;
     private final MinioProperties minioProperties;
 
     public KnowledgeAdminService(FileService fileService,
                                  KnowledgeDocumentService documentService,
+                                 KnowledgeChunkService chunkService,
                                  KnowledgeDocumentIngestService ingestService,
                                  MinioProperties minioProperties) {
         this.fileService = fileService;
         this.documentService = documentService;
+        this.chunkService = chunkService;
         this.ingestService = ingestService;
         this.minioProperties = minioProperties;
     }
@@ -83,22 +89,68 @@ public class KnowledgeAdminService {
     }
 
     public void publishDocument(Long documentId, Long operatorId) {
+        KnowledgeDocumentEntity document = requireDocument(documentId);
+        if (!"EMBEDDED".equals(document.getParserStatus()) || document.getChunkCount() == null || document.getChunkCount() <= 0) {
+            throw new BusinessException("知识文档尚未完成切片入库，不能发布");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
         KnowledgeDocumentEntity update = new KnowledgeDocumentEntity();
         update.setId(documentId);
         update.setStatus("PUBLISHED");
-        update.setPublishedAt(LocalDateTime.now());
-        update.setUpdatedAt(LocalDateTime.now());
+        update.setPublishedAt(now);
+        update.setUpdatedAt(now);
         update.setUpdatedBy(operatorId);
         documentService.updateById(update);
+
+        syncChunkStatus(documentId, "PUBLISHED", now);
     }
 
     public void offlineDocument(Long documentId, Long operatorId) {
+        requireDocument(documentId);
+
+        LocalDateTime now = LocalDateTime.now();
         KnowledgeDocumentEntity update = new KnowledgeDocumentEntity();
         update.setId(documentId);
         update.setStatus("OFFLINE");
-        update.setOfflineAt(LocalDateTime.now());
+        update.setOfflineAt(now);
+        update.setUpdatedAt(now);
+        update.setUpdatedBy(operatorId);
+        documentService.updateById(update);
+
+        syncChunkStatus(documentId, "OFFLINE", now);
+    }
+
+    public int reindexDocument(Long documentId, Long operatorId) {
+        requireDocument(documentId);
+
+        KnowledgeDocumentEntity update = new KnowledgeDocumentEntity();
+        update.setId(documentId);
+        update.setParserStatus("PENDING");
         update.setUpdatedAt(LocalDateTime.now());
         update.setUpdatedBy(operatorId);
         documentService.updateById(update);
+
+        return ingestService.ingestDocument(documentId);
+    }
+
+    private KnowledgeDocumentEntity requireDocument(Long documentId) {
+        KnowledgeDocumentEntity document = documentService.getById(documentId);
+        if (document == null || Boolean.TRUE.equals(document.getDeleted())) {
+            throw new BusinessException("知识文档不存在");
+        }
+        return document;
+    }
+
+    private void syncChunkStatus(Long documentId, String status, LocalDateTime now) {
+        KnowledgeChunkEntity chunkUpdate = new KnowledgeChunkEntity();
+        chunkUpdate.setDocumentStatus(status);
+        chunkUpdate.setUpdatedAt(now);
+        chunkService.update(
+                chunkUpdate,
+                new QueryWrapper<KnowledgeChunkEntity>()
+                        .eq("document_id", documentId)
+                        .eq("deleted", false)
+        );
     }
 }

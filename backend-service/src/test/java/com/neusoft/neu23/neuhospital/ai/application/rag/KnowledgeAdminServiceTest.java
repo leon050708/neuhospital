@@ -1,6 +1,9 @@
 package com.neusoft.neu23.neuhospital.ai.application.rag;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.neusoft.neu23.neuhospital.ai.domain.entity.KnowledgeChunkEntity;
 import com.neusoft.neu23.neuhospital.ai.domain.entity.KnowledgeDocumentEntity;
+import com.neusoft.neu23.neuhospital.ai.infrastructure.service.KnowledgeChunkService;
 import com.neusoft.neu23.neuhospital.ai.infrastructure.service.KnowledgeDocumentService;
 import com.neusoft.neu23.neuhospital.ct.config.MinioProperties;
 import com.neusoft.neu23.neuhospital.file.service.FileService;
@@ -13,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -24,6 +28,7 @@ class KnowledgeAdminServiceTest {
     void shouldUploadCreateDocumentAndTriggerIngest() {
         FileService fileService = mock(FileService.class);
         KnowledgeDocumentService documentService = mock(KnowledgeDocumentService.class);
+        KnowledgeChunkService chunkService = mock(KnowledgeChunkService.class);
         KnowledgeDocumentIngestService ingestService = mock(KnowledgeDocumentIngestService.class);
         MinioProperties minioProperties = new MinioProperties();
         MinioProperties.Bucket bucket = new MinioProperties.Bucket();
@@ -33,6 +38,7 @@ class KnowledgeAdminServiceTest {
         KnowledgeAdminService adminService = new KnowledgeAdminService(
                 fileService,
                 documentService,
+                chunkService,
                 ingestService,
                 minioProperties
         );
@@ -70,6 +76,96 @@ class KnowledgeAdminServiceTest {
         assertEquals("PUBLISHED", captor.getValue().getStatus());
         assertEquals(88L, captor.getValue().getFileRecordId());
 
+        verify(ingestService).ingestDocument(101L);
+    }
+
+    @Test
+    void shouldSyncChunkStatusWhenPublishingDraftDocument() {
+        FileService fileService = mock(FileService.class);
+        KnowledgeDocumentService documentService = mock(KnowledgeDocumentService.class);
+        KnowledgeChunkService chunkService = mock(KnowledgeChunkService.class);
+        KnowledgeDocumentIngestService ingestService = mock(KnowledgeDocumentIngestService.class);
+        MinioProperties minioProperties = new MinioProperties();
+
+        KnowledgeAdminService adminService = new KnowledgeAdminService(
+                fileService,
+                documentService,
+                chunkService,
+                ingestService,
+                minioProperties
+        );
+
+        KnowledgeDocumentEntity document = new KnowledgeDocumentEntity();
+        document.setId(101L);
+        document.setStatus("DRAFT");
+        document.setParserStatus("EMBEDDED");
+        document.setChunkCount(3);
+        when(documentService.getById(101L)).thenReturn(document);
+
+        adminService.publishDocument(101L, 9001L);
+
+        verify(chunkService).update(
+                argThat(update -> "PUBLISHED".equals(update.getDocumentStatus())),
+                argThat((QueryWrapper<KnowledgeChunkEntity> wrapper) ->
+                        wrapper.getSqlSegment().contains("document_id") && wrapper.getSqlSegment().contains("deleted"))
+        );
+    }
+
+    @Test
+    void shouldSyncChunkStatusWhenOffliningPublishedDocument() {
+        FileService fileService = mock(FileService.class);
+        KnowledgeDocumentService documentService = mock(KnowledgeDocumentService.class);
+        KnowledgeChunkService chunkService = mock(KnowledgeChunkService.class);
+        KnowledgeDocumentIngestService ingestService = mock(KnowledgeDocumentIngestService.class);
+        MinioProperties minioProperties = new MinioProperties();
+
+        KnowledgeAdminService adminService = new KnowledgeAdminService(
+                fileService,
+                documentService,
+                chunkService,
+                ingestService,
+                minioProperties
+        );
+
+        KnowledgeDocumentEntity document = new KnowledgeDocumentEntity();
+        document.setId(101L);
+        document.setStatus("PUBLISHED");
+        when(documentService.getById(101L)).thenReturn(document);
+
+        adminService.offlineDocument(101L, 9001L);
+
+        verify(chunkService).update(
+                argThat(update -> "OFFLINE".equals(update.getDocumentStatus())),
+                argThat((QueryWrapper<KnowledgeChunkEntity> wrapper) ->
+                        wrapper.getSqlSegment().contains("document_id") && wrapper.getSqlSegment().contains("deleted"))
+        );
+    }
+
+    @Test
+    void shouldReindexDocumentThroughIngestService() {
+        FileService fileService = mock(FileService.class);
+        KnowledgeDocumentService documentService = mock(KnowledgeDocumentService.class);
+        KnowledgeChunkService chunkService = mock(KnowledgeChunkService.class);
+        KnowledgeDocumentIngestService ingestService = mock(KnowledgeDocumentIngestService.class);
+        MinioProperties minioProperties = new MinioProperties();
+
+        KnowledgeAdminService adminService = new KnowledgeAdminService(
+                fileService,
+                documentService,
+                chunkService,
+                ingestService,
+                minioProperties
+        );
+
+        KnowledgeDocumentEntity document = new KnowledgeDocumentEntity();
+        document.setId(101L);
+        when(documentService.getById(101L)).thenReturn(document);
+        when(ingestService.ingestDocument(101L)).thenReturn(4);
+
+        int chunkCount = adminService.reindexDocument(101L, 9001L);
+
+        assertEquals(4, chunkCount);
+        verify(documentService).updateById(argThat(update -> update.getId().equals(101L) && update.getUpdatedBy().equals(9001L)));
         verify(ingestService).ingestDocument(101L);
     }
 }
