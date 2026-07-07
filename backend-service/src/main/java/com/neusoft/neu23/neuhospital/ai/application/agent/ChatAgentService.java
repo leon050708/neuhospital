@@ -21,6 +21,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +32,8 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 public class ChatAgentService {
+
+    private static final ZoneId HOSPITAL_ZONE = ZoneId.of("Asia/Shanghai");
 
     private final ChatClient agentChatClient;
     private final ChatClient analysisChatClient;
@@ -154,7 +158,13 @@ public class ChatAgentService {
         List<Message> messages = new ArrayList<>();
 
         SystemPromptTemplate promptTemplate = new SystemPromptTemplate(systemPromptResource);
-        Message systemMessage = promptTemplate.createMessage(Map.of("patientId", session.getPatientId()));
+        ZonedDateTime now = ZonedDateTime.now(HOSPITAL_ZONE);
+        Message systemMessage = promptTemplate.createMessage(Map.of(
+                "patientId", session.getPatientId(),
+                "hospitalTimeZone", HOSPITAL_ZONE.getId(),
+                "currentDate", now.toLocalDate(),
+                "currentDateTime", now.toLocalDateTime()
+        ));
         messages.add(systemMessage);
 
         if (session.getSummary() != null && !session.getSummary().trim().isEmpty()) {
@@ -255,3 +265,7 @@ public class ChatAgentService {
         });
     }
 }
+
+
+
+

@@ -19,6 +19,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class DoctorScheduleServiceImpl implements DoctorScheduleService {
+
+    private static final ZoneId HOSPITAL_ZONE = ZoneId.of("Asia/Shanghai");
 
     private final DoctorScheduleMapper doctorScheduleMapper;
     private final DoctorMapper doctorMapper;
@@ -121,7 +124,7 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
     public Page<DoctorScheduleVO> getSchedulesPage(Integer pageNo, Integer pageSize, Long doctorId, Long departmentId, LocalDate scheduleDate, String timeSlot) {
         Page<DoctorScheduleEntity> page = new Page<>(pageNo != null ? pageNo : 1, pageSize != null ? pageSize : 10);
         QueryWrapper<DoctorScheduleEntity> wrapper = new QueryWrapper<>();
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(HOSPITAL_ZONE);
         if (doctorId != null) wrapper.eq("doctor_id", doctorId);
         if (departmentId != null) wrapper.eq("department_id", departmentId);
         if (scheduleDate != null) {
@@ -223,3 +226,6 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         return vo;
     }
 }
+
+
+

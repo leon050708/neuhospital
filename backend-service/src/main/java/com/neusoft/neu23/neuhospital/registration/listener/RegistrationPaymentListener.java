@@ -10,6 +10,7 @@ import com.neusoft.neu23.neuhospital.registration.service.RegistrationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -19,6 +20,8 @@ import java.time.LocalDateTime;
 
 @Component
 public class RegistrationPaymentListener {
+
+    private static final ZoneId HOSPITAL_ZONE = ZoneId.of("Asia/Shanghai");
 
     @Autowired
     private RegistrationMapper registrationMapper;
@@ -39,7 +42,7 @@ public class RegistrationPaymentListener {
                     registrationMapper.updateById(reg);
 
                     // 如果是当日号，自动签到入队列
-                    if (reg.getVisitDate() != null && reg.getVisitDate().equals(LocalDate.now())) {
+                    if (reg.getVisitDate() != null && reg.getVisitDate().equals(LocalDate.now(HOSPITAL_ZONE))) {
                         registrationService.checkIn(reg.getId(), null);
                     }
                 }
@@ -64,3 +67,5 @@ public class RegistrationPaymentListener {
         }
     }
 }
+
+

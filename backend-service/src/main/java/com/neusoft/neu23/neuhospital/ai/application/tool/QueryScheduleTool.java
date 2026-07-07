@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Description;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.Comparator;
 import java.util.List;
@@ -17,6 +18,8 @@ import java.util.stream.Collectors;
 
 @Configuration
 public class QueryScheduleTool {
+
+    private static final ZoneId HOSPITAL_ZONE = ZoneId.of("Asia/Shanghai");
 
     private final RegistrationGatewayClient registrationGatewayClient;
 
@@ -98,7 +101,7 @@ public class QueryScheduleTool {
             return null;
         }
         String normalized = rawDate.trim().toLowerCase(Locale.ROOT);
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(HOSPITAL_ZONE);
         return switch (normalized) {
             case "今天", "today" -> today;
             case "明天", "tomorrow" -> today.plusDays(1);
@@ -142,3 +145,6 @@ public class QueryScheduleTool {
         return 9;
     }
 }
+
+
+
