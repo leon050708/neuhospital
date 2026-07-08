@@ -15,7 +15,7 @@ public class DispenseController {
     private DispenseService dispenseService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','PHARMACIST')")
+    @PreAuthorize("hasRole('PHARMACIST')")
     public Result<Long> dispense(@RequestBody DispenseReq req) {
         return Result.success(dispenseService.dispense(req));
     }
