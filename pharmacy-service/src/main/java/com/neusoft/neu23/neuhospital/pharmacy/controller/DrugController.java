@@ -20,21 +20,21 @@ public class DrugController {
     private DrugInfoService drugInfoService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','PHARMACIST')")
+    @PreAuthorize("hasRole('PHARMACIST')")
     public Result<Long> createDrug(@RequestBody DrugInfoCreateReq req) {
         Long id = drugInfoService.createDrug(req);
         return Result.success(id);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','PHARMACIST')")
+    @PreAuthorize("hasRole('PHARMACIST')")
     public Result<Void> updateDrug(@PathVariable Long id, @RequestBody DrugInfoUpdateReq req) {
         drugInfoService.updateDrug(id, req);
         return Result.success(null);
     }
 
     @PostMapping("/{id}/stock-adjust")
-    @PreAuthorize("hasAnyRole('ADMIN','PHARMACIST')")
+    @PreAuthorize("hasRole('PHARMACIST')")
     public Result<Void> adjustStock(@PathVariable Long id, @RequestBody DrugStockAdjustReq req) {
         drugInfoService.adjustStock(id, req.getAdjustQuantity());
         return Result.success(null);
